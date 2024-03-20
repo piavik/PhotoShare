@@ -1,0 +1,32 @@
+[tool.poetry]
+name = "PhotoShare"
+version = "0.1.0"
+description = "FastAPI pictures management app"
+authors = ["Alexey Lomakin <lomakin.dec1970@gmail.com>", "Oleksii Piavka <piavik@gmail.com>", "Olga Ivanko <o.ivanko@me.com", "Roman Siusiailo <siusiailoroman@gmail.com>"]
+license = "MIT"
+readme = "README.md"
+
+[tool.poetry.dependencies]
+python = "^3.11"
+fastapi = "^0.110.0"
+SQLAlchemy = "^2.0.28"
+alembic = "^1.13.1"
+cloudinary = "^1.39.1"
+qrcode = "^7.4.2"
+python-jose = {extras = ["cryptography"], version = "^3.3.0"}
+python-dotenv = "^1.0.1"
+psycopg2 = "^2.9.9"
+redis = "^5.0.3"
+pydantic = "^2.6.4"
+uvicorn = "^0.29.0"
+
+[tool.poetry.group.dev.dependencies]
+Sphinx = "^7.2.6"
+
+
+[tool.poetry.group.test.dependencies]
+pytest = "^8.1.1"
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"
