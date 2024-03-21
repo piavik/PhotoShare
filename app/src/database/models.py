@@ -42,13 +42,19 @@ class Photo(BaseTable):
     comments: Mapped[list[Comment]] = relationship("Comment")
 
 
+class Role(Base):
+    __tablename__ = 'roles'
+    id: Mapped[int] = mapped_column(primary_key=True)
+    name: Mapped[str] = mapped_column(String(50), nullable=False)
+
+
 class User(BaseTable):
     __tablename__ = 'users'
     id: Mapped[int] = mapped_column(primary_key=True)
     username: Mapped[String] = mapped_column(String(50))
     email: Mapped[String] = mapped_column(String(100), nullable=False, unique=True)
     password: Mapped[String] = mapped_column(String(100), nullable=False)
-    role: Mapped[String] = mapped_column(String(50), nullable=False)
+    role_id: Mapped[Role] = mapped_column(ForeignKey("roles.id"), default=1)
     refresh_token: Mapped[String] = mapped_column(String(255), nullable=True)
     confirmed: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
     avatar: Mapped[String] = mapped_column(String(255), nullable=True)
