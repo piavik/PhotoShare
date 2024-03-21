@@ -2,12 +2,12 @@ version: '3'
 services:
   redis:
     image: redis:alpine
-    container-name: hw-redis
+    container_name: hw-redis
     ports:
       - "${REDIS_PORT}:6379"
   postgres:
     image: postgres:12
-    container-name: hw-postgres
+    container_name: hw-postgres
     environment:
       POSTGRES_DB: ${POSTGRESS_DB_NAME}
       POSTGRES_USER: ${POSTGRESS_USER}
