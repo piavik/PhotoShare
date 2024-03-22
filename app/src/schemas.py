@@ -1,5 +1,6 @@
-from pydantic import BaseModel, Field, EmailStr, ConfigDict
+from pydantic import BaseModel, Field, EmailStr, ConfigDict, HttpUrl
 from datetime import datetime
+from typing import Optional, List
 
 
 class UserModel(BaseModel):
@@ -31,3 +32,22 @@ class TokenModel(BaseModel):
 
 class RequestEmail(BaseModel):
     email: EmailStr
+
+
+class PhotoModel(BaseModel):
+    photo_url: str
+    owner_id: int
+    description: str
+
+
+class PhotoDb(BaseModel):
+    id: int
+    photo_url: str
+    owner_id: int
+    description: str
+    model_config = ConfigDict(from_attributes=True)
+
+
+class PhotoResponse(BaseModel):
+    photo: PhotoDb
+    detail: str = "Photo successfully uploaded"

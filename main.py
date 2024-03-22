@@ -4,7 +4,7 @@ from fastapi_limiter.depends import RateLimiter
 import redis.asyncio as redis
 import uvicorn
 
-from app.src.routes import auth, users
+from app.src.routes import auth, users, photos
 from app.src.conf.config import settings
 
 
@@ -12,6 +12,7 @@ app = FastAPI()
 
 app.include_router(auth.router, prefix="/api")
 app.include_router(users.router, prefix='/api')
+app.include_router(photos.router, prefix="/api")
 
 
 @app.on_event("startup")
