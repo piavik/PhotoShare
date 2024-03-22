@@ -1,4 +1,4 @@
-from sqlalchemy import String, DateTime, ForeignKey, Table, Column, Boolean
+from sqlalchemy import String, DateTime, ForeignKey, Table, Column, Boolean, Float
 from sqlalchemy.orm import declarative_base, mapped_column, Mapped, relationship
 from datetime import datetime
 
@@ -37,9 +37,13 @@ class Photo(BaseTable):
     __tablename__ = 'photos'
     id: Mapped[int] = mapped_column(primary_key=True)
     photo_url: Mapped[str] = mapped_column(String(255), nullable=False)
+    description: Mapped[str] = mapped_column(String(255), nullable=True)
+    owner_id: Mapped[int] = mapped_column(ForeignKey("users.id"))
+    user = relationship("User", backref="photos")
     changed_photo_url: Mapped[str] = mapped_column(String(255), nullable=True)
     tags: Mapped[list[Tag]] = relationship("Tag", secondary="association_table", backref="photos")
     comments: Mapped[list[Comment]] = relationship("Comment")
+    rating: Mapped[Float] = mapped_column(Float, nullable=True, default=0.0)
 
 
 class Role(Base):
