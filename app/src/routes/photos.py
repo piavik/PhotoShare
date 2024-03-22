@@ -26,12 +26,12 @@ cloudinary.config(
     "/upload", response_model=PhotoResponse, status_code=status.HTTP_201_CREATED
 )
 async def create_photo(
-    file: UploadFile = File(...),
-    description: str = Form(...),
-    tags: str = Form(""),
-    current_user: User = Depends(auth_service.get_current_user),
-    db: Session = Depends(get_db),
-):
+        file: UploadFile = File(...),
+        description: str = Form(...),
+        tags: str = Form(""),
+        current_user: User = Depends(auth_service.get_current_user),
+        db: Session = Depends(get_db),
+    ):
     tags_list = tags.split(",")[:5]
     file.file.seek(0)
     upload_result = cloudinary.uploader.upload(file.file)
@@ -72,13 +72,12 @@ async def create_photo(
     )
     return photo_response
 
-
 @router.delete("/{photo_id}")
 async def delete_photo(
-    photo_id: int,
-    current_user: User = Depends(auth_service.get_current_user),
-    db: Session = Depends(get_db)
-):
+        photo_id: int,
+        current_user: User = Depends(auth_service.get_current_user),
+        db: Session = Depends(get_db)
+    ):
     photo = db.query(Photo).filter(Photo.id == photo_id).first()
 
     if not photo:
@@ -98,3 +97,4 @@ async def delete_photo(
     db.commit()
 
     return {"detail":"Photo succesfuly deleted"}
+
