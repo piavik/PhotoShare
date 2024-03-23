@@ -1,4 +1,13 @@
-from sqlalchemy import String, DateTime, ForeignKey, Table, Column, Boolean, Float
+from sqlalchemy import (
+    Integer,
+    String,
+    DateTime,
+    ForeignKey,
+    Table,
+    Column,
+    Boolean,
+    Float,
+)
 from sqlalchemy.orm import declarative_base, mapped_column, Mapped, relationship
 from datetime import datetime
 
@@ -29,10 +38,12 @@ class Tag(Base):
 
 class Comment(BaseTable):
     __tablename__ = "comments"
-    id: Mapped[int] = mapped_column(primary_key=True)
-    text: Mapped[str] = mapped_column(String(255), nullable=False)
-    photo_id: Mapped[int] = mapped_column(ForeignKey("photos.id"))
-    user_id: Mapped[int] = mapped_column(ForeignKey("users.id"))
+    id = Column(Integer, primary_key=True)
+    text = Column(String(255), nullable=False)
+    photo_id = Column(Integer, ForeignKey("photos.id"))
+    user_id = Column(Integer, ForeignKey("users.id"))
+    created_at = Column(DateTime, default=datetime.now)
+    updated_at = Column(DateTime, default=datetime.now, onupdate=datetime.now)
 
 
 class Photo(BaseTable):
