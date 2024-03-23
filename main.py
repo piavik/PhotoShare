@@ -1,4 +1,5 @@
 from msilib import schema
+from winreg import HKEY_CURRENT_USER
 from fastapi import FastAPI, Depends, HTTPException
 from fastapi_limiter import FastAPILimiter
 from fastapi_limiter.depends import RateLimiter
@@ -8,9 +9,11 @@ import redis.asyncio as redis
 import uvicorn
 
 from app.src.database.db import SessionLocal
+from app.src.database.models import User
 from app.src.routes import auth, users, photos
 from app.src.conf.config import settings
 from app.src.database import crud
+from app.src.services.comment_service import delete_comment
 
 app = FastAPI()
 
@@ -61,6 +64,17 @@ def update_comment(
     db.commit()
 
     return {"message": "Комментарий успешно обновлен"}
+
+
+# Маршрут для удаления комментария
+@app.delete("/comments/{comment_id}")
+def delete_comment_route(
+    comment_id: int,
+    current_user: User = Depends(HKEY_CURRENT_USER),
+    db: Session = Depends(SessionLocal),
+):
+    delete_comment(comment_id, current_user, db)
+    return {"message": "Комментарий успешно удален"}
 
 
 if __name__ == "__main__":
