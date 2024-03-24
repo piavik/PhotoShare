@@ -1,4 +1,4 @@
-from pydantic import BaseModel, Field, EmailStr, ConfigDict, HttpUrl
+from pydantic import BaseModel, Field, EmailStr, ConfigDict, HttpUrl, constr
 from datetime import datetime
 from typing import Optional, List
 
@@ -51,3 +51,7 @@ class PhotoDb(BaseModel):
 class PhotoResponse(BaseModel):
     photo: PhotoDb
     detail: str = "Photo successfully uploaded"
+
+
+class TagModel(BaseModel):
+    name: constr(strip_whitespace=True, min_length=1, max_length=40)
