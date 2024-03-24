@@ -7,6 +7,7 @@ from sqlalchemy import (
     Column,
     Boolean,
     Float,
+    UniqueConstraint,
 )
 from sqlalchemy.orm import declarative_base, mapped_column, Mapped, relationship
 from datetime import datetime
@@ -48,19 +49,25 @@ class Comment(BaseTable):
 
 class Photo(BaseTable):
     __tablename__ = "photos"
-    id: Mapped[int] = mapped_column(primary_key=True)
-    photo_url: Mapped[str] = mapped_column(String(255), nullable=False)
-    description: Mapped[str] = mapped_column(String(255), nullable=True)
-    owner_id: Mapped[int] = mapped_column(ForeignKey("users.id"))
+    id = Column(Integer, primary_key=True)
+    photo_url = Column(String(255), nullable=False)
+    description = Column(String(255), nullable=True)
+    owner_id = Column(Integer, ForeignKey("users.id"))
     user = relationship("User", backref="photos")
-    changed_photo_url: Mapped[str] = mapped_column(String(255), nullable=True)
-    tags: Mapped[list[Tag]] = relationship(
-        "Tag", secondary="association_table", backref="photos"
-    )
-    comments: Mapped[list[Comment]] = relationship(
-        "Comment", backref="photo"
-    )  # Добавлено отношение к комментариям
-    rating: Mapped[Float] = mapped_column(Float, nullable=True, default=0.0)
+    changed_photo_url = Column(String(255), nullable=True)
+    tags = relationship("Tag", secondary="association_table", backref="photos")
+    comments = relationship("Comment", backref="photo")
+    rating = Column(Float, nullable=True, default=0.0)  # Добавлено поле rating
+
+    def update_rating(self, new_rating: int):
+        # Вычисляем новый средний рейтинг
+        num_ratings = len(self.comments)
+        total_rating = self.rating * num_ratings
+        new_total_rating = total_rating + new_rating
+        new_average_rating = new_total_rating / (num_ratings + 1)
+
+        # Обновляем рейтинг
+        self.rating = new_average_rating
 
 
 class Role(Base):
@@ -79,3 +86,16 @@ class User(BaseTable):
     refresh_token: Mapped[String] = mapped_column(String(255), nullable=True)
     confirmed: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
     avatar: Mapped[String] = mapped_column(String(255), nullable=True)
+
+
+class UserPhotoRating(Base):
+    __tablename__ = "user_photo_ratings"
+    id = Column(Integer, primary_key=True)
+    user_id = Column(Integer, ForeignKey("users.id"))
+    photo_id = Column(Integer, ForeignKey("photos.id"))
+    rating = Column(Integer)
+
+    # Уникальный составной ключ для предотвращения дублирования оценок
+    __table_args__ = (
+        UniqueConstraint("user_id", "photo_id", name="unique_user_photo_rating"),
+    )
