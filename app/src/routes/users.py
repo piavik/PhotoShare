@@ -4,7 +4,7 @@ from sqlalchemy.orm import Session
 import cloudinary
 import cloudinary.uploader
 import redis
-from app.src.database import crud
+from app.src.repository import photos as repository_photos
 
 from app.src.database.db import SessionLocal, get_db
 from app.src.database.models import User, Photo
@@ -18,7 +18,10 @@ red = redis.Redis(host=settings.redis_host, port=settings.redis_port, db=0)
 
 
 @router.get("/me/", response_model=UserDb)
-async def read_users_me(current_user: User = Depends(auth_service.get_current_user)):
+async def read_users_me(
+    current_user: User = Depends(auth_service.get_current_user),
+    db: Session = Depends(get_db),
+):
     return current_user
 
 
@@ -51,10 +54,10 @@ def rate_photo(
     photo_id: int,
     rating: int,
     current_user: User = Depends(auth_service.get_current_user),
-    db: Session = Depends(SessionLocal),
+    db: Session = Depends(get_db),
 ):
     # Получаем фотографию по ее идентификатору
-    photo = crud.get_photo(db, photo_id)
+    photo = repository_photos.get_photo(db, photo_id)
     if photo is None:
         raise HTTPException(status_code=404, detail="Фотография не найдена")
 
@@ -63,7 +66,7 @@ def rate_photo(
         raise HTTPException(status_code=400, detail="Оценка должна быть от 1 до 5")
 
     # Проверяем, существует ли уже оценка от данного пользователя для данной фотографии
-    user_rating = crud.get_user_photo_rating(db, current_user.id, photo_id)
+    user_rating = repository_photos.get_user_photo_rating(db, current_user.id, photo_id)
     if user_rating:
         raise HTTPException(status_code=400, detail="Вы уже оценили эту фотографию")
 
@@ -78,7 +81,7 @@ def rate_photo(
         raise HTTPException(status_code=403, detail="Недостаточно прав")
 
     # Сохраняем оценку пользователя для фотографии
-    crud.create_user_photo_rating(db, current_user.id, photo_id, rating)
+    repository_photos.create_user_photo_rating(db, current_user.id, photo_id, rating)
 
     # Обновляем рейтинг фотографии
     photo.update_rating(rating)
