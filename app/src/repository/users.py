@@ -5,7 +5,7 @@ from app.src.database.models import User
 from app.src.schemas import UserModel
 
 
-async def get_user_by_email(email: str, db: Session) -> User:
+async def get_user_by_email(email: str, db: Session) -> User | None:
     return db.query(User).filter(User.email == email).first()
 
 
@@ -38,6 +38,8 @@ async def update_avatar(email: str, url: str, db: Session) -> User:
 async def confirmed_email(email: str, db: Session) -> None:
     user = await get_user_by_email(email, db)
     user.confirmed = True
+    if user.id == 1:
+        user.role = "admin"
     db.commit()
 
 

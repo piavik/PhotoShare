@@ -52,4 +52,5 @@ async def change_user_role(user_email: str, new_role: str,
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN,
                             detail="You do not have permission to modify to admin")
     changed_user = repository_users.change_user_role(user, new_role, db)
+    red.delete(f"user:{user.email}")
     return changed_user
