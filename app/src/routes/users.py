@@ -17,8 +17,8 @@ router = APIRouter(prefix="/users", tags=["users"])
 red = redis.Redis(host=settings.redis_host, port=settings.redis_port, db=0)
 
 
-@router.get("/me/", response_model=UserDb)
-async def read_users_me(current_user: User = Depends(RoleChecker(allowed_roles=["admin"]))):
+@router.get("/me", response_model=UserDb)
+async def read_users_me(current_user: User = Depends(auth_service.get_current_user)):
     return current_user
 
 
