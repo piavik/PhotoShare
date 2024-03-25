@@ -15,7 +15,7 @@ class UserDb(BaseModel):
     email: EmailStr
     avatar: str
     created_at: datetime
-    role_id: int
+    role: str
     model_config = ConfigDict(from_attributes=True)
 
 

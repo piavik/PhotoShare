@@ -1,4 +1,4 @@
-from typing import Optional
+from typing import Optional, Annotated
 import pickle
 
 from jose import JWTError, jwt
@@ -12,6 +12,7 @@ import redis
 from app.src.database.db import get_db
 from app.src.repository import users as repository_users
 from app.src.conf.config import settings
+from app.src.schemas import UserDb
 
 
 class Auth:
@@ -85,22 +86,6 @@ class Auth:
             user = pickle.loads(user)
         return user
 
-    async def get_current_admin_user(self, token: str = Depends(oauth2_scheme), db: Session = Depends(get_db)):
-        user = await self.get_current_user(token=token, db=db)
-        if user.role_id == 2:
-            return user
-        else:
-            raise HTTPException(status_code=status.HTTP_403_FORBIDDEN,
-                                detail="You do not have permission to perform this action")
-
-    async def get_current_moderator_user(self, token: str = Depends(oauth2_scheme), db: Session = Depends(get_db)):
-        user = await self.get_current_user(token=token, db=db)
-        if user.role_id == 3:
-            return user
-        else:
-            raise HTTPException(status_code=status.HTTP_403_FORBIDDEN,
-                                detail="You do not have permission to perform this action")
-
     def create_email_token(self, data: dict):
         to_encode = data.copy()
         expire = datetime.utcnow() + timedelta(days=7)
@@ -120,3 +105,18 @@ class Auth:
 
 
 auth_service = Auth()
+
+
+class RoleChecker:
+    def __init__(self, allowed_roles):
+        self.allowed_roles = allowed_roles
+
+    def __call__(self, user: Annotated[UserDb, Depends(auth_service.get_current_user)]):
+        if "moder" in self.allowed_roles:
+            self.allowed_roles.append("admin")
+        elif "user" in self.allowed_roles:
+            self.allowed_roles.extend(["admin", "moder"])
+        if user.role in self.allowed_roles:
+            return user
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="You don't have enough permissions")
+
