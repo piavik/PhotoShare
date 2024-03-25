@@ -14,7 +14,8 @@ from app.src.database.models import Base
 SQLALCHEMY_DATABASE_URL = "sqlite:///./tests/test.db"
 
 engine = create_engine(SQLALCHEMY_DATABASE_URL,
-                       connect_args={"check_same_thread": False})
+                       connect_args={"check_same_thread": False},) 
+                    #    echo=True)
 
 TestingSessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 

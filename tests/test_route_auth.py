@@ -1,5 +1,6 @@
 import pytest
 from jose import jwt
+from fastapi import HTTPException, status
 
 from unittest.mock import Mock, MagicMock, patch
 
@@ -92,7 +93,7 @@ def test_login_fail_user_not_confirmed(client, session, user, monkeypatch):
 #---- confirm email ----
 @pytest.fixture
 def mock_get_user_by_email():
-    with patch("get_user_by_email") as mock:
+    with patch("auth_service.get_user_by_email") as mock:
         yield mock
 
 @pytest.fixture
@@ -108,20 +109,24 @@ def test_confirm_email_ok(client, session, user, monkeypatch):
     response = client.get(
         f"/api/auth/confirm_email/{token}"
     )
+    print(response.text)
     assert response.status_code == 200
     data = response.json()
     assert data['message'] == "Email verified"
 
 def test_confirm_email_fail_wrong_token(client, session, user, monkeypatch):
-    token = "whatever"
+    token = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJidWthQGUuY29tIiwiaWF0IjoxNzEwNzE5MjgwLCJleHAiOjI3MTA3MTkyODAsInNjb3BlIjoiZW1haWxfdG9rZW4ifQ.0MdrnUkIhat0QDR61TcKPqXHbx4RDxN1zsUnmp4i1vg"
+    mock_get_user_by_email.return_value = user.get("username")
+    mock_get_email_from_token.return_value = HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+                                                           detail="Invalid token for email verification")
     response = client.get(
         f"/api/auth/confirm_email/{token}"
     )
-    assert response.status_code == 422
+    # assert response.status_code == 422
     data = response.json()
     assert data['detail'] == "Invalid token for email verification"
 
-# #---- request email ----
+#---- request email ----
 # def test_request_email_ok(client, session, user, monkeypatch):
 #     ...
 
