@@ -7,7 +7,7 @@ from typing import Optional
 
 from app.src.schemas import PhotoResponse, PhotoModel, PhotoDb
 from app.src.database.db import get_db
-from app.src.database.models import User, Photo
+from app.src.database.models import User, Photo, UserPhotoRating
 from app.src.repository import photos as repository_photos
 from app.src.services.auth import auth_service
 from app.src.conf.config import settings
@@ -26,12 +26,12 @@ cloudinary.config(
     "/upload", response_model=PhotoResponse, status_code=status.HTTP_201_CREATED
 )
 async def create_photo(
-        file: UploadFile = File(...),
-        description: str = Form(...),
-        tags: str = Form(""),
-        current_user: User = Depends(auth_service.get_current_user),
-        db: Session = Depends(get_db),
-    ):
+    file: UploadFile = File(...),
+    description: str = Form(...),
+    tags: str = Form(""),
+    current_user: User = Depends(auth_service.get_current_user),
+    db: Session = Depends(get_db),
+):
     tags_list = tags.split(",")[:5]
     file.file.seek(0)
     upload_result = cloudinary.uploader.upload(file.file)
@@ -58,7 +58,7 @@ async def create_photo(
         db=db,
         photo_to_create=photo_create,
         user_id=current_user.id,
-        tags_list=tags_list
+        tags_list=tags_list,
     )
 
     photo_response = PhotoResponse(
@@ -72,21 +72,35 @@ async def create_photo(
     )
     return photo_response
 
+
+def get_user_photo_rating(db: Session, user_id: int, photo_id: int) -> int:
+    user_photo_rating = (
+        db.query(UserPhotoRating)
+        .filter(
+            UserPhotoRating.user_id == user_id, UserPhotoRating.photo_id == photo_id
+        )
+        .first()
+    )
+    return user_photo_rating.rating if user_photo_rating else None
+
+
 @router.delete("/{photo_id}")
 async def delete_photo(
-        photo_id: int,
-        current_user: User = Depends(auth_service.get_current_user),
-        db: Session = Depends(get_db)
-    ):
+    photo_id: int,
+    current_user: User = Depends(auth_service.get_current_user),
+    db: Session = Depends(get_db),
+):
     photo = db.query(Photo).filter(Photo.id == photo_id).first()
 
     if not photo:
         raise HTTPException(status_code=404, detail="Photo not found")
 
-    if photo.owner_id != current_user.id: 
+    if photo.owner_id != current_user.id:
         admin_user = await auth_service.get_current_admin_user(db=db)
-        if not admin_user: 
-            raise HTTPException(status_code=403, detail="Not enought rights to delete this photo")
+        if not admin_user:
+            raise HTTPException(
+                status_code=403, detail="Not enought rights to delete this photo"
+            )
 
     public_id = photo.photo_url.split("/")[-1].split(".")[0]
     result = cloudinary.uploader.destroy(public_id=public_id, invalidate=True)
@@ -96,5 +110,4 @@ async def delete_photo(
     db.delete(photo)
     db.commit()
 
-    return {"detail":"Photo succesfuly deleted"}
-
+    return {"detail": "Photo succesfuly deleted"}

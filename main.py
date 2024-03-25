@@ -1,19 +1,19 @@
-from msilib import schema
 from winreg import HKEY_CURRENT_USER
 from fastapi import FastAPI, Depends, HTTPException
 from fastapi_limiter import FastAPILimiter
 from fastapi_limiter.depends import RateLimiter
-from mysqlx import Session
-from pydantic import BaseModel
 import redis.asyncio as redis
 import uvicorn
 
-from app.src.database.db import SessionLocal
+from app.src.database.db import SessionLocal, Session
 from app.src.database.models import User
 from app.src.routes import auth, users, photos
 from app.src.conf.config import settings
 from app.src.database import crud
 from app.src.services.comment_service import delete_comment
+from app.src.schemas import CommentUpdate
+from app.src.schemas import schema
+
 
 app = FastAPI()
 
