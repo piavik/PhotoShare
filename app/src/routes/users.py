@@ -1,3 +1,5 @@
+from typing import Annotated
+
 from fastapi import APIRouter, Depends, UploadFile, File
 from sqlalchemy.orm import Session
 import cloudinary
@@ -7,7 +9,7 @@ import redis
 from app.src.database.db import get_db
 from app.src.database.models import User
 from app.src.repository import users as repository_users
-from app.src.services.auth import auth_service
+from app.src.services.auth import auth_service, RoleChecker
 from app.src.conf.config import settings
 from app.src.schemas import UserDb
 
@@ -15,13 +17,14 @@ router = APIRouter(prefix="/users", tags=["users"])
 red = redis.Redis(host=settings.redis_host, port=settings.redis_port, db=0)
 
 
-@router.get("/me/", response_model=UserDb)
+@router.get("/me", response_model=UserDb)
 async def read_users_me(current_user: User = Depends(auth_service.get_current_user)):
     return current_user
 
 
 @router.patch('/avatar', response_model=UserDb)
-async def update_avatar_user(file: UploadFile = File(), current_user: User = Depends(auth_service.get_current_user),
+async def update_avatar_user(file: UploadFile = File(),
+                             current_user: User = Depends(RoleChecker(allowed_roles=["user"])),
                              db: Session = Depends(get_db)):
     cloudinary.config(
         cloud_name=settings.cloudinary_name,
