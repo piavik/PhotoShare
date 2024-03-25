@@ -39,3 +39,9 @@ async def confirmed_email(email: str, db: Session) -> None:
     user = await get_user_by_email(email, db)
     user.confirmed = True
     db.commit()
+
+
+def change_user_role(user: User, role: str, db: Session) -> User:
+    user.role = role
+    db.commit()
+    return user
