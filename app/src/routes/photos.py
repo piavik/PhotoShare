@@ -111,3 +111,6 @@ async def delete_photo(
     db.commit()
 
     return {"detail": "Photo succesfuly deleted"}
+
+
+# 3

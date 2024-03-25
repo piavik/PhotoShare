@@ -16,3 +16,6 @@ def delete_comment_route(
 ):
     delete_comment(comment_id, current_user, db)
     return {"message": "Комментарий успешно удален"}
+
+
+# 4

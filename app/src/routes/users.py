@@ -88,3 +88,6 @@ def rate_photo(
     db.commit()
 
     return photo
+
+
+# 2

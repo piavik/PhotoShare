@@ -99,3 +99,6 @@ class UserPhotoRating(Base):
     __table_args__ = (
         UniqueConstraint("user_id", "photo_id", name="unique_user_photo_rating"),
     )
+
+
+# 1
