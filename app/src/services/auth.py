@@ -88,7 +88,7 @@ class Auth:
 
     def create_email_token(self, data: dict):
         to_encode = data.copy()
-        expire = datetime.utcnow() + timedelta(days=7)
+        expire = datetime.utcnow() + timedelta(minutes=15)
         to_encode.update({"iat": datetime.utcnow(), "exp": expire})
         token = jwt.encode(to_encode, self.SECRET_KEY, algorithm=self.ALGORITHM)
         return token
@@ -103,6 +103,16 @@ class Auth:
             raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
                                 detail="Invalid token for email verification")
 
+    async def get_password_from_token(self, token: str):
+        try:
+            payload = jwt.decode(token, self.SECRET_KEY, algorithms=[self.ALGORITHM])
+            password = payload["pass"]
+            return password
+        except JWTError as e:
+            print(e)
+            raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+                                detail="Invalid token for password reset")
+
 
 auth_service = Auth()
 
@@ -112,9 +122,9 @@ class RoleChecker:
         self.allowed_roles = allowed_roles
 
     def __call__(self, user: Annotated[UserDb, Depends(auth_service.get_current_user)]):
-        if "moder" in self.allowed_roles:
+        if ["moder"] == self.allowed_roles:
             self.allowed_roles = ("admin", "moder")
-        elif "user" in self.allowed_roles:
+        elif ["user"] == self.allowed_roles:
             self.allowed_roles = ("admin", "moder", "user")
         if user.role in self.allowed_roles:
             return user

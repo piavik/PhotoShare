@@ -24,6 +24,16 @@ class UserResponse(BaseModel):
     detail: str = "User successfully created"
 
 
+class UserPassword(BaseModel):
+    old_password: str = Field(min_length=6, max_length=20)
+    new_password: str = Field(min_length=6, max_length=20)
+
+
+class UserNewPassword(BaseModel):
+    email: EmailStr
+    new_password: str = Field(min_length=6, max_length=20)
+
+
 class TokenModel(BaseModel):
     access_token: str
     refresh_token: str
