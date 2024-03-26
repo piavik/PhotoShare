@@ -15,7 +15,7 @@ SQLALCHEMY_DATABASE_URL = "sqlite:///./tests/test.db"
 
 engine = create_engine(SQLALCHEMY_DATABASE_URL,
                        connect_args={"check_same_thread": False},) 
-                    #    echo=True)
+                       # echo=True)      # debug
 
 TestingSessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 
@@ -54,6 +54,7 @@ def user():
     return {"username": "biakabuka", 
             "email": "buka@example.com", 
             "password": "123456789"}
+
 
 @pytest.fixture(scope="function", autouse=True)
 def patch_fastapi_limiter(monkeypatch):

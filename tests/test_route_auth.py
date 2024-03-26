@@ -1,11 +1,8 @@
 import pytest
 from jose import jwt
-from fastapi import HTTPException, status
-
-from unittest.mock import Mock, MagicMock, patch
+from unittest.mock import MagicMock #, patch
 
 from app.src.database.models import User
-from app.src.repository.users import get_user_by_email
 from app.src.services.auth import auth_service
 
 
@@ -36,7 +33,7 @@ def test_signup_fail_existing_user(client, user, monkeypatch):
     assert data["detail"] == "Account already exists"
 
 #---- login ----
-def test_login_ok(client, session, user, monkeypatch):
+def test_login_ok(client, session, user):
     current_user: User = (
         session.query(User).filter(User.email == user.get("email")).first()
     )
@@ -51,7 +48,7 @@ def test_login_ok(client, session, user, monkeypatch):
     assert data["token_type"] == "bearer"
     assert "password" not in data
 
-def test_login_fail_user_not_found(client, user, monkeypatch):
+def test_login_fail_user_not_found(client, user):
     response = client.post(
         "/api/auth/login",
         data={"username": "some@amail.com", "password": user.get("password")},
@@ -60,7 +57,7 @@ def test_login_fail_user_not_found(client, user, monkeypatch):
     data = response.json()
     assert data['detail'] == "Invalid email"
 
-def test_login_fail_wrong_password(client, user, monkeypatch):
+def test_login_fail_wrong_password(client, user):
     response = client.post(
         "/api/auth/login",
         data={"username": user.get("email"), "password": "abracadabra"},
@@ -69,7 +66,7 @@ def test_login_fail_wrong_password(client, user, monkeypatch):
     data = response.json()
     assert data['detail'] == "Invalid password"
 
-def test_login_fail_user_not_confirmed(client, session, user, monkeypatch):
+def test_login_fail_user_not_confirmed(client, session, user):
     current_user: User = (
         session.query(User).filter(User.email == user.get("email")).first()
     )
@@ -85,51 +82,106 @@ def test_login_fail_user_not_confirmed(client, session, user, monkeypatch):
 
 #---- refresh token ----
 # requred user to be authenticated
-# def test_refresh_token_ok(client, session, user, monkeypatch):
-#     response = client.get(
-#         "/api/auth/refresh",
-#         data={"username": user.get("email"), "password": user.get("password")},
-#     )
-
-#---- confirm email ----
-@pytest.fixture
-def mock_get_user_by_email():
-    with patch("get_user_by_email") as mock:
-        yield mock
-
-@pytest.fixture
-def mock_get_email_from_token():
-    # with patch("auth_service.get_email_from_token") as mock:
-    with patch("get_email_from_token") as mock:     # testing
-        yield mock
-
-def test_confirm_email_ok(client, session, user, monkeypatch):
-    token_data = {"sub": user.get("email"), "iat": 1710719280, "exp": 2710719280, "scope": "email_token"}
-    token = jwt.encode(token_data, auth_service.SECRET_KEY, algorithm=auth_service.ALGORITHM)
-    mock_get_user_by_email.return_value = user.get("username")
-    mock_get_email_from_token.return_value = user.get("email")
+def test_refresh_token_ok(client, session, user, monkeypatch):
     response = client.get(
-        f"/api/auth/confirm_email/{token}"
+        "/api/auth/refresh"
     )
-    print(response.text)
     assert response.status_code == 200
     data = response.json()
-    assert data['message'] == "Email verified"
+    assert isinstance(data['access_token'], str)
+    assert isinstance(data['refresh_token'], str)
+    assert data['token_type'] == "bearer"
 
-# def test_confirm_email_fail_wrong_token(client, session, user, monkeypatch):
-#     token = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJidWthQGUuY29tIiwiaWF0IjoxNzEwNzE5MjgwLCJleHAiOjI3MTA3MTkyODAsInNjb3BlIjoiZW1haWxfdG9rZW4ifQ.0MdrnUkIhat0QDR61TcKPqXHbx4RDxN1zsUnmp4i1vg"
-#     mock_get_user_by_email.return_value = user.get("username")
-#     mock_get_email_from_token.return_value = HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
-#                                                            detail="Invalid token for email verification")
+# def test_refresh_token_fail_user_not_found(client, session, user, monkeypatch):
 #     response = client.get(
-#         f"/api/auth/confirm_email/{token}"
+#         "/api/auth/refresh"
 #     )
-#     # assert response.status_code == 422
-#     data = response.json()
-#     assert data['detail'] == "Invalid token for email verification"
+#     assert response.status_code == 404
+
+
+# def test_refresh_token_fail_wrong_token_scope(client, session, user, monkeypatch):
+#     response = client.get(
+#         "/api/auth/refresh"
+#     )
+#     assert response.status_code == 401
+
+# def test_refresh_token_fail_wrong_token_expired(client, session, user, monkeypatch):
+#     response = client.get(
+#         "/api/auth/refresh"
+#     )
+#     assert response.status_code == 401
+
+
+
+#---- confirm email ----
+# @pytest.fixture
+# def mock_get_user_by_email():
+#     with patch("get_user_by_email") as mock:
+#         yield mock
+
+# @pytest.fixture
+# def mock_get_email_from_token():
+#     # with patch("auth_service.get_email_from_token") as mock:
+#     with patch("get_email_from_token") as mock:     # testing
+#         yield mock
+
+def test_confirm_email_ok(client, session, user):
+    token_data = {"sub": user.get("email"), "iat": 1710719280, "exp": 2710719280, "scope": "email_token"}
+    token = jwt.encode(token_data, auth_service.SECRET_KEY, algorithm=auth_service.ALGORITHM)
+    response = client.get(
+        f"/api/auth/confirmed_email/{token}"
+    )
+    print(f'{response.text}')
+    assert response.status_code == 200
+    data = response.json()
+    assert data['message'] == "Email confirmed"
+
+def test_confirm_email_ok_already_confirmed(client, session, user):
+    token_data = {"sub": user.get("email"), "iat": 1710719280, "exp": 2710719280, "scope": "email_token"}
+    token = jwt.encode(token_data, auth_service.SECRET_KEY, algorithm=auth_service.ALGORITHM)
+    response = client.get(
+        f"/api/auth/confirmed_email/{token}"
+    )
+    print(f'{response.text}')
+    assert response.status_code == 200
+    data = response.json()
+    assert data['message'] == "Your email is already confirmed"
+
+def test_confirm_email_fail_user_not_found(client, session, user):
+    token_data = {"sub": "some_incorrect_email@here.com", "iat": 1710719280, "exp": 2710719280, "scope": "email_token"}
+    token = jwt.encode(token_data, auth_service.SECRET_KEY, algorithm=auth_service.ALGORITHM)
+    response = client.get(
+        f"/api/auth/confirmed_email/{token}"
+    )
+    assert response.status_code == 400
+    data = response.json()
+    assert data['detail'] == "Verification error"
+
+def test_confirm_email_fail_wrong_token_scope(client, session, user):
+    token_data = {"sub": user.get("email"), "iat": 1710719280, "exp": 2710719280, "scope": "refresh_token"}
+    token = jwt.encode(token_data, auth_service.SECRET_KEY, algorithm=auth_service.ALGORITHM)
+    response = client.get(
+        f"/api/auth/confirmed_email/{token}"
+    )
+    assert response.status_code == 422
+    data = response.json()
+    assert data['detail'] == "Invalid token for email verification"
+
+def test_confirm_email_fail_wrong_token_expired(client, session, user):
+    token_data = {"sub": user.get("email"), "iat": 1710719280, "exp": 1710721280, "scope": "email_token"}
+    token = jwt.encode(token_data, auth_service.SECRET_KEY, algorithm=auth_service.ALGORITHM)
+    response = client.get(
+        f"/api/auth/confirmed_email/{token}"
+    )
+    assert response.status_code == 422
+    data = response.json()
+    assert data['detail'] == "Invalid token for email verification"
 
 #---- request email ----
 # def test_request_email_ok(client, session, user, monkeypatch):
+#     ...
+
+# def test_request_email_fail_random_string_not_email(client, session, user, monkeypatch):
 #     ...
 
 # def test_request_email_fail_user_not_found(client, session, user, monkeypatch):
