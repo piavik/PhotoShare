@@ -182,3 +182,69 @@ async def update_description(
         ),
         detail="Description successfully updated",
     )
+
+
+@router.put("/{photo_id}/transform", response_model=PhotoDetailedResponse)
+async def transform_photo(
+    photo_id: int,
+    width: Optional[int] = Form(None),
+    height: Optional[int] = Form(None),
+    crop: Optional[str] = Form(
+        None, description="Type of crop (scale, fill, fit, etc.)"
+    ),
+    angle: Optional[int] = Form(None),
+    filter: Optional[str] = Form(
+        None, description="Apply a filter (sepia, grayscale, etc.)"
+    ),
+    gravity: Optional[str] = Form(
+        None, description="Gravity for cropping (north, south, east, west, face, etc.)"
+    ),
+    current_user: User = Depends(RoleChecker(["user"])),
+    db: Session = Depends(get_db),
+):
+    photo = await repository_photos.get_photo_by_id(db, photo_id)
+    if not photo:
+        raise HTTPException(status_code=404, detail="Photo not found")
+    if photo.owner_id != current_user.id and current_user.role != "admin":
+        raise HTTPException(
+            status_code=403, detail="Not enough permissions to edit this photo"
+        )
+
+    transformations = []
+    if width:
+        transformations.append(f"w_{width}")
+    if height:
+        transformations.append(f"h_{height}")
+    if crop:
+        transformations.append(f"c_{crop}")
+    if angle:
+        transformations.append(f"a_{angle}")
+    if filter:
+        transformations.append(f"e_{filter}")
+    if gravity:
+        transformations.append(f"g_{gravity}")
+
+    transformation_string = ",".join(transformations)
+    if transformation_string:
+        public_id = photo.photo_url.split("/")[-1].split(".")[0]
+        new_url = f"https://res.cloudinary.com/{cloudinary.config().cloud_name}/image/upload/{transformation_string}/{public_id}.jpg"
+        photo.changed_photo_url = new_url
+    else:
+        raise HTTPException(status_code=400, detail="No transformations provided")
+
+    db.commit()
+
+    converted_tags = [TagModel(name=tag.name) for tag in photo.tags]
+
+    updated_photo = PhotoDetailedResponse(
+    id=photo.id,
+    photo_url=photo.photo_url,
+    changed_photo_url=new_url,
+    owner_id=photo.owner_id,
+    description=photo.description,
+    tags=converted_tags, 
+    created_at=photo.created_at,
+    updated_at=photo.updated_at,
+)
+
+    return updated_photo
