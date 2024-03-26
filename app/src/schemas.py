@@ -55,3 +55,14 @@ class PhotoResponse(BaseModel):
 
 class TagModel(BaseModel):
     name: constr(strip_whitespace=True, min_length=1, max_length=40)
+
+
+class PhotoDetailedResponse(BaseModel):
+    id: int
+    photo_url: HttpUrl
+    owner_id: int
+    description: Optional[str] = None
+    tags: List[TagModel] = []
+    created_at: datetime
+    updated_at: datetime
+    model_config = ConfigDict(from_attributes=True)
