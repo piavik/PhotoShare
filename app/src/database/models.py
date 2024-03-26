@@ -39,7 +39,7 @@ class Tag(Base):
 
 class Comment(BaseTable):
     __tablename__ = "comments"
-    id = Column(Integer, primary_key=True)
+    id = Mapped[int] = mapped_column(primary_key=True)
     text = Column(String(255), nullable=False)
     photo_id = Column(Integer, ForeignKey("photos.id"))
     user_id = Column(Integer, ForeignKey("users.id"))

@@ -37,6 +37,3 @@ def delete_comment(comment_id: int, current_user: models.User, db: Session) -> N
     # Удаляем комментарий из базы данных
     db.delete(comment)
     db.commit()
-
-
-# 5
