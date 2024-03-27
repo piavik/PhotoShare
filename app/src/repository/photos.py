@@ -74,3 +74,14 @@ async def edit_photo_description(db: Session, photo_id: int, user_id: int, new_d
     photo.description = new_description
     db.commit()
     return photo
+
+
+async def delete_photo(db: Session, photo_id: int, user_id: int):
+    photo = (
+        db.query(Photo).filter(Photo.id == photo_id, Photo.owner_id == user_id).first()
+    )
+    if not photo:
+        return None
+    db.delete(photo)
+    db.commit()
+    return True

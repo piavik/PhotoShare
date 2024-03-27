@@ -1,9 +1,12 @@
 from fastapi import APIRouter, Depends, UploadFile, File, Form, status, HTTPException
+from fastapi.responses import StreamingResponse
 from sqlalchemy.orm import Session
 import cloudinary
 import cloudinary.uploader
 from cloudinary.uploader import destroy
 from typing import Optional, List
+import qrcode
+from io import BytesIO
 
 from app.src.schemas import (
     PhotoResponse,
@@ -99,10 +102,7 @@ async def delete_photo(
     public_id = photo.photo_url.split("/")[-1].split(".")[0]
     result = cloudinary.uploader.destroy(public_id=public_id, invalidate=True)
 
-    print(result)
-
-    db.delete(photo)
-    db.commit()
+    await repository_photos.delete_photo(db, photo_id, photo.owner_id)
 
     return {"detail": "Photo succesfuly deleted"}
 
@@ -146,17 +146,6 @@ async def update_photo_tags(
     )
     if not updated_photo:
         raise HTTPException(status_code=404, detail="Failed to update tags")
-
-    updated_photo = PhotoDetailedResponse(
-            id=updated_photo.id,
-            photo_url=updated_photo.photo_url,
-            changed_photo_url=updated_photo.changed_photo_url,
-            owner_id=updated_photo.owner_id,
-            description=updated_photo.description,
-            tags=[TagModel(name=tag.name) for tag in updated_photo.tags],
-            created_at=updated_photo.created_at,
-            updated_at=updated_photo.updated_at,
-            )
 
     return updated_photo
 
@@ -255,19 +244,33 @@ async def transform_photo(
     else:
         raise HTTPException(status_code=400, detail="No transformations provided")
 
-    db.commit()
+    return photo
 
-    converted_tags = [TagModel(name=tag.name) for tag in photo.tags]
 
-    updated_photo = PhotoDetailedResponse(
-    id=photo.id,
-    photo_url=photo.photo_url,
-    changed_photo_url=new_url,
-    owner_id=photo.owner_id,
-    description=photo.description,
-    tags=converted_tags, 
-    created_at=photo.created_at,
-    updated_at=photo.updated_at,
-)
+@router.post("/photos/{photo_id}/transformed_photo_qr", status_code=status.HTTP_201_CREATED)
+async def get_photo_qr(photo_id: int,db: Session = Depends(get_db),):
+    photo = await repository_photos.get_photo_by_id(db, photo_id)
 
-    return updated_photo
+    if not photo:
+        raise HTTPException(status_code=404, detail="Photo not found")
+
+    transformed_photo_url = photo.changed_photo_url
+    if not transformed_photo_url:
+        raise HTTPException(status_code=404, detail="Transformed photo URL not found")
+
+    qr = qrcode.QRCode(
+        version=1,
+        error_correction=qrcode.constants.ERROR_CORRECT_L,
+        box_size=10,
+        border=4,
+    )
+    qr.add_data(transformed_photo_url)
+    qr.make(fit=True)
+
+    img = qr.make_image(fill_color="black", back_color="white")
+
+    img_io = BytesIO()
+    img.save(img_io, format="PNG")
+    img_io.seek(0)
+
+    return StreamingResponse(img_io, media_type="image/png")
