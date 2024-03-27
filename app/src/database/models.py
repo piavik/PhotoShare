@@ -82,23 +82,7 @@ class User(BaseTable):
     username: Mapped[String] = mapped_column(String(50))
     email: Mapped[String] = mapped_column(String(100), nullable=False, unique=True)
     password: Mapped[String] = mapped_column(String(100), nullable=False)
-    role_id: Mapped[Role] = mapped_column(ForeignKey("roles.id"), default=1)
+    role: Mapped[String] = mapped_column(String(20), nullable=False, default="user")
     refresh_token: Mapped[String] = mapped_column(String(255), nullable=True)
     confirmed: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
     avatar: Mapped[String] = mapped_column(String(255), nullable=True)
-
-
-class UserPhotoRating(Base):
-    __tablename__ = "user_photo_ratings"
-    id = Column(Integer, primary_key=True)
-    user_id = Column(Integer, ForeignKey("users.id"))
-    photo_id = Column(Integer, ForeignKey("photos.id"))
-    rating = Column(Integer)
-
-    # Уникальный составной ключ для предотвращения дублирования оценок
-    __table_args__ = (
-        UniqueConstraint("user_id", "photo_id", name="unique_user_photo_rating"),
-    )
-
-
-# 1

@@ -3,13 +3,19 @@ from sqlalchemy.orm import Session
 import cloudinary
 import cloudinary.uploader
 from cloudinary.uploader import destroy
-from typing import Optional
+from typing import Optional, List
 
-from app.src.schemas import PhotoResponse, PhotoModel, PhotoDb
+from app.src.schemas import (
+    PhotoResponse,
+    PhotoModel,
+    PhotoDb,
+    PhotoDetailedResponse,
+    TagModel,
+)
 from app.src.database.db import get_db
 from app.src.database.models import User, Photo, UserPhotoRating
 from app.src.repository import photos as repository_photos
-from app.src.services.auth import auth_service
+from app.src.services.auth import auth_service, RoleChecker
 from app.src.conf.config import settings
 
 router = APIRouter(prefix="/photos", tags=["photos"])
@@ -73,17 +79,6 @@ async def create_photo(
     return photo_response
 
 
-def get_user_photo_rating(db: Session, user_id: int, photo_id: int) -> int:
-    user_photo_rating = (
-        db.query(UserPhotoRating)
-        .filter(
-            UserPhotoRating.user_id == user_id, UserPhotoRating.photo_id == photo_id
-        )
-        .first()
-    )
-    return user_photo_rating.rating if user_photo_rating else None
-
-
 @router.delete("/{photo_id}")
 async def delete_photo(
     photo_id: int,
@@ -111,6 +106,3 @@ async def delete_photo(
     db.commit()
 
     return {"detail": "Photo succesfuly deleted"}
-
-
-# 3

@@ -1,26 +1,41 @@
-from multiprocessing.spawn import get_command_line
-from winreg import HKEY_CURRENT_USER
-from fastapi import FastAPI, Depends, HTTPException
+from fastapi import FastAPI, Depends
 from fastapi_limiter import FastAPILimiter
 from fastapi_limiter.depends import RateLimiter
 import redis.asyncio as redis
 import uvicorn
 
-from app.src.database.db import SessionLocal, Session
-from app.src.database.models import User
 from app.src.routes import auth, users, photos
 from app.src.conf.config import settings
-
-from app.src.services.comment_service import delete_comment
-from app.src.schemas import CommentUpdate
-from app.src.schemas import schema
-
+from app.src.routes import (
+    auth,
+    users,
+    photos,
+    comment,
+)  # Импортируем маршруты для комментариев
 
 app = FastAPI()
 
 app.include_router(auth.router, prefix="/api")
 app.include_router(users.router, prefix="/api")
 app.include_router(photos.router, prefix="/api")
+app.include_router(comment.router, prefix="/api")  # Добавляем маршруты для комментариев
+
+
+@app.on_event("startup")
+async def startup() -> None:
+    r = await redis.Redis(
+        host=settings.redis_host,
+        port=settings.redis_port,
+        db=0,
+        encoding="utf-8",
+        decode_responses=True,
+    )
+    await FastAPILimiter.init(r)
+
+
+@app.get("/", dependencies=[Depends(RateLimiter(times=2, seconds=5))])
+def read_root() -> dict:
+    return {"PhotoShare": "FastAPI group project"}
 
 
 @app.on_event("startup")

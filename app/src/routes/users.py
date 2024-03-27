@@ -1,5 +1,4 @@
-from msilib import schema
-from fastapi import APIRouter, Depends, HTTPException, UploadFile, File
+from fastapi import APIRouter, Depends, UploadFile, File
 from sqlalchemy.orm import Session
 import cloudinary
 import cloudinary.uploader
@@ -9,19 +8,17 @@ from app.src.repository import photos as repository_photos
 from app.src.database.db import SessionLocal, get_db
 from app.src.database.models import User, Photo
 from app.src.repository import users as repository_users
-from app.src.services.auth import auth_service
+from app.src.services.auth import RoleChecker, auth_service
 from app.src.conf.config import settings
-from app.src.schemas import UserDb
+from app.src.schemas import UserDb, UserPassword, UserNewPassword
+from app.src.services.email import send_password_email
 
 router = APIRouter(prefix="/users", tags=["users"])
 red = redis.Redis(host=settings.redis_host, port=settings.redis_port, db=0)
 
 
 @router.get("/me/", response_model=UserDb)
-async def read_users_me(
-    current_user: User = Depends(auth_service.get_current_user),
-    db: Session = Depends(get_db),
-):
+async def read_users_me(current_user: User = Depends(auth_service.get_current_user)):
     return current_user
 
 
@@ -47,47 +44,3 @@ async def update_avatar_user(
     user = await repository_users.update_avatar(current_user.email, src_url, db)
     red.delete(f"user:{current_user.email}")
     return user
-
-
-@router.post("/photos/{photo_id}/rate/", response_model=schema.Photo)
-def rate_photo(
-    photo_id: int,
-    rating: int,
-    current_user: User = Depends(auth_service.get_current_user),
-    db: Session = Depends(get_db),
-):
-    # Получаем фотографию по ее идентификатору
-    photo = repository_photos.get_photo(db, photo_id)
-    if photo is None:
-        raise HTTPException(status_code=404, detail="Фотография не найдена")
-
-    # Проверяем, что оценка находится в диапазоне от 1 до 5
-    if rating < 1 or rating > 5:
-        raise HTTPException(status_code=400, detail="Оценка должна быть от 1 до 5")
-
-    # Проверяем, существует ли уже оценка от данного пользователя для данной фотографии
-    user_rating = repository_photos.get_user_photo_rating(db, current_user.id, photo_id)
-    if user_rating:
-        raise HTTPException(status_code=400, detail="Вы уже оценили эту фотографию")
-
-    # Проверяем, является ли текущий пользователь владельцем фотографии
-    if current_user.id == photo.owner_id:
-        raise HTTPException(
-            status_code=400, detail="Вы не можете оценивать свои фотографии"
-        )
-
-    # Проверяем, является ли текущий пользователь администратором или модератором
-    if not current_user.is_admin and not current_user.is_moderator:
-        raise HTTPException(status_code=403, detail="Недостаточно прав")
-
-    # Сохраняем оценку пользователя для фотографии
-    repository_photos.create_user_photo_rating(db, current_user.id, photo_id, rating)
-
-    # Обновляем рейтинг фотографии
-    photo.update_rating(rating)
-    db.commit()
-
-    return photo
-
-
-# 2

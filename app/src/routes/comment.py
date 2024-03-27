@@ -1,12 +1,9 @@
-from winreg import HKEY_CURRENT_USER
-
-from requests import Session
-
-
-from app.src.schemas import CommentUpdate
 from app.src.database.db import SessionLocal
 from app.src.database.models import Comment, User, UserRole
+from app.src.schemas import CommentUpdate
+from app.src.routes import RoleChecker  # Импорт RoleChecker
 from fastapi import APIRouter, Depends, HTTPException
+from sqlalchemy.orm import Session
 
 router = APIRouter()
 
@@ -17,25 +14,10 @@ def update_comment(
     comment_id: int,
     comment_update: CommentUpdate,
     db: Session = Depends(SessionLocal),
+    role_checker: RoleChecker = Depends(),  # Использование RoleChecker как зависимости
 ):
-    # Получаем комментарий из базы данных по его идентификатору
-    db_comment = db.query(Comment).filter(Comment.id == comment_id).first()
-    if db_comment is None:
-        raise HTTPException(status_code=404, detail="Комментарий не найден")
-
-    # Проверяем, принадлежит ли комментарий текущему пользователю
-    if db_comment.user_id != comment_update.user_id:
-        raise HTTPException(
-            status_code=403, detail="Нельзя редактировать чужой комментарий"
-        )
-
-    # Обновляем текст комментария
-    db_comment.text = comment_update.text
-
-    # Сохраняем изменения в базе данных
-    db.commit()
-
-    return {"message": "Комментарий успешно обновлен"}
+    # Проверка роли пользователя
+    role_checker.check_role()
 
 
 # Маршрут для удаления комментария
@@ -44,7 +26,10 @@ def delete_comment_route(
     comment_id: int,
     current_user: User = Depends(HKEY_CURRENT_USER),
     db: Session = Depends(SessionLocal),
+    role_checker: RoleChecker = Depends(),  # Использование RoleChecker как зависимости
 ):
+    # Проверка роли пользователя
+    role_checker.check_role()
     # Получаем комментарий из базы данных по его идентификатору
     db_comment = db.query(Comment).filter(Comment.id == comment_id).first()
     if db_comment is None:
