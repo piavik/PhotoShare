@@ -65,6 +65,9 @@ class Auth:
             headers={"WWW-Authenticate": "Bearer"},
         )
 
+        logout_check = self.r.get(token)
+        if logout_check:
+            raise credentials_exception
         try:
             payload = jwt.decode(token, self.SECRET_KEY, algorithms=[self.ALGORITHM])
             if payload['scope'] == 'access_token':
@@ -115,6 +118,9 @@ class Auth:
             print(e)
             raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
                                 detail="Invalid token for password reset")
+
+    def get_user_token(self, token: str = Depends(oauth2_scheme)):
+        return token
 
 
 auth_service = Auth()
