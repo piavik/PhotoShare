@@ -65,6 +65,9 @@ class Auth:
             headers={"WWW-Authenticate": "Bearer"},
         )
 
+        logout_check = self.r.get(token)
+        if logout_check:
+            raise credentials_exception
         try:
             payload = jwt.decode(token, self.SECRET_KEY, algorithms=[self.ALGORITHM])
             if payload['scope'] == 'access_token':
@@ -80,20 +83,25 @@ class Auth:
             user = await repository_users.get_user_by_email(email, db)
             if user is None:
                 raise credentials_exception
+            elif user.banned:
+                raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="User is banned")
             self.r.set(f"user:{email}", pickle.dumps(user))
             self.r.expire(f"user:{email}", 900)
         else:
             user = pickle.loads(user)
         return user
 
-    def create_email_token(self, data: dict):
+    def create_email_token(self, data: dict, expires_delta: Optional[float] = None) -> str:
         to_encode = data.copy()
-        expire = datetime.utcnow() + timedelta(days=7)
+        if expires_delta:
+            expire = datetime.utcnow() + timedelta(minutes=expires_delta)
+        else:
+            expire = datetime.utcnow() + timedelta(days=7)
         to_encode.update({"iat": datetime.utcnow(), "exp": expire})
         token = jwt.encode(to_encode, self.SECRET_KEY, algorithm=self.ALGORITHM)
         return token
 
-    async def get_email_from_token(self, token: str):
+    async def get_email_from_token(self, token: str) -> str:
         try:
             payload = jwt.decode(token, self.SECRET_KEY, algorithms=[self.ALGORITHM])
             email = payload["sub"]
@@ -102,6 +110,19 @@ class Auth:
             print(e)
             raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
                                 detail="Invalid token for email verification")
+
+    async def get_password_from_token(self, token: str) -> str:
+        try:
+            payload = jwt.decode(token, self.SECRET_KEY, algorithms=[self.ALGORITHM])
+            password = payload["pass"]
+            return password
+        except JWTError as e:
+            print(e)
+            raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+                                detail="Invalid token for password reset")
+
+    def get_user_token(self, token: str = Depends(oauth2_scheme)):
+        return token
 
 
 auth_service = Auth()
@@ -112,9 +133,9 @@ class RoleChecker:
         self.allowed_roles = allowed_roles
 
     def __call__(self, user: Annotated[UserDb, Depends(auth_service.get_current_user)]):
-        if "moder" in self.allowed_roles:
+        if ["moder"] == self.allowed_roles:
             self.allowed_roles = ("admin", "moder")
-        elif "user" in self.allowed_roles:
+        elif ["user"] == self.allowed_roles:
             self.allowed_roles = ("admin", "moder", "user")
         if user.role in self.allowed_roles:
             return user
