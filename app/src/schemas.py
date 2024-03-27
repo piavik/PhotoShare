@@ -60,7 +60,7 @@ class TagModel(BaseModel):
 class PhotoDetailedResponse(BaseModel):
     id: int
     photo_url: HttpUrl
-    changed_photo_url: HttpUrl
+    changed_photo_url: HttpUrl | None
     owner_id: int
     description: Optional[str] = None
     tags: List[TagModel] = []

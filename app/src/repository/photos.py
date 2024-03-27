@@ -17,7 +17,7 @@ async def create_photo(db: Session, photo_to_create: PhotoModel, user_id: int, t
     db.add(new_photo)
     db.commit()
     db.refresh(new_photo)
-    db.commit()
+
     return new_photo
 
 

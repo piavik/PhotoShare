@@ -38,7 +38,7 @@ async def create_photo(
     current_user: User = Depends(auth_service.get_current_user),
     db: Session = Depends(get_db),
 ):
-    tags_list = tags.split(",")
+    tags_list = tags.strip().split(" ")
     file.file.seek(0)
     upload_result = cloudinary.uploader.upload(file.file)
 
@@ -90,10 +90,11 @@ async def delete_photo(
     if not photo:
         raise HTTPException(status_code=404, detail="Photo not found")
 
-    if photo.owner_id != current_user.id and current_user.role != "admin":
-            raise HTTPException(
-                status_code=403, detail="Not enought rights to delete this photo"
-            )
+    if current_user.role != "admin":
+        if photo.owner_id != current_user.id:
+                raise HTTPException(
+                    status_code=403, detail="Not enought rights to delete this photo"
+                )
 
     public_id = photo.photo_url.split("/")[-1].split(".")[0]
     result = cloudinary.uploader.destroy(public_id=public_id, invalidate=True)
@@ -120,33 +121,42 @@ async def read_photo(
 @router.put("/{photo_id}/tags", response_model=PhotoDetailedResponse)
 async def update_photo_tags(
     photo_id: int,
-    tags: str = Form(""),
+    tags: str = Form("", description="Print your tags separated with space"),
     current_user: User = Depends(auth_service.get_current_user),
     db: Session = Depends(get_db),
 ):
     photo = await repository_photos.get_photo_by_id(db, photo_id)
     if not photo:
         raise HTTPException(status_code=404, detail="Photo not found")
-    if photo.owner_id != current_user.id and current_user.role != "admin":
+    if current_user.role != "admin":
+        if photo.owner_id != current_user.id:
+            raise HTTPException(
+                status_code=403, detail="Not enough rights to edit tags of this photo"
+            )
+
+    new_tags_list = [tag for tag in tags.strip().split(" ") if tag]
+
+    if not new_tags_list:
         raise HTTPException(
-            status_code=403, detail="Not enough rights to edit tags of this photo"
+            status_code=400, detail="No valid tags provided, existing tags remain unchanged"
         )
 
     updated_photo = await repository_photos.edit_photo_tags(
-        db, photo_id, current_user.id, tags.split(",")
+        db, photo_id, current_user.id, new_tags_list
     )
     if not updated_photo:
         raise HTTPException(status_code=404, detail="Failed to update tags")
 
     updated_photo = PhotoDetailedResponse(
-        id=updated_photo.id,
-        photo_url=updated_photo.photo_url,
-        owner_id=updated_photo.owner_id,
-        description=updated_photo.description,
-        tags=[TagModel(name=tag.name) for tag in updated_photo.tags],
-        created_at=updated_photo.created_at,
-        updated_at=updated_photo.updated_at,
-    )
+            id=updated_photo.id,
+            photo_url=updated_photo.photo_url,
+            changed_photo_url=updated_photo.changed_photo_url,
+            owner_id=updated_photo.owner_id,
+            description=updated_photo.description,
+            tags=[TagModel(name=tag.name) for tag in updated_photo.tags],
+            created_at=updated_photo.created_at,
+            updated_at=updated_photo.updated_at,
+            )
 
     return updated_photo
 
@@ -161,10 +171,12 @@ async def update_description(
     photo = await repository_photos.get_photo_by_id(db, photo_id)
     if not photo:
         raise HTTPException(status_code=404, detail="Photo not found")
-    if  photo.owner_id != current_user.id and current_user.role != "admin":
-        raise HTTPException(
-            status_code=403, detail="Not enough permissions to change the description"
-        )
+    if current_user.role != "admin":
+        if photo.owner_id != current_user.id:
+            raise HTTPException(
+                status_code=403,
+                detail="Not enough rights to change the description to this photo",
+            )
 
     try:
         updated_photo = await repository_photos.edit_photo_description(
@@ -205,10 +217,11 @@ async def transform_photo(
     photo = await repository_photos.get_photo_by_id(db, photo_id)
     if not photo:
         raise HTTPException(status_code=404, detail="Photo not found")
-    if photo.owner_id != current_user.id and current_user.role != "admin":
-        raise HTTPException(
-            status_code=403, detail="Not enough permissions to edit this photo"
-        )
+    if current_user.role != "admin":
+        if photo.owner_id != current_user.id:
+            raise HTTPException(
+                status_code=403, detail="Not enought rights to transform this photo"
+            )
 
     transformations = []
     if width:
@@ -229,6 +242,16 @@ async def transform_photo(
         public_id = photo.photo_url.split("/")[-1].split(".")[0]
         new_url = f"https://res.cloudinary.com/{cloudinary.config().cloud_name}/image/upload/{transformation_string}/{public_id}.jpg"
         photo.changed_photo_url = new_url
+
+        transformed_photo = await repository_photos.create_photo(
+            db,
+            PhotoModel(photo_url = new_url,
+                owner_id = current_user.id,
+                description=f"This is a transformed version of photo id {photo_id}",
+            ),
+            user_id=current_user.id,
+            tags_list=[]
+        )
     else:
         raise HTTPException(status_code=400, detail="No transformations provided")
 
