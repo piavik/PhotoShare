@@ -86,14 +86,17 @@ class Auth:
             user = pickle.loads(user)
         return user
 
-    def create_email_token(self, data: dict):
+    def create_email_token(self, data: dict, expires_delta: Optional[float] = None) -> str:
         to_encode = data.copy()
-        expire = datetime.utcnow() + timedelta(minutes=15)
+        if expires_delta:
+            expire = datetime.utcnow() + timedelta(minutes=expires_delta)
+        else:
+            expire = datetime.utcnow() + timedelta(days=7)
         to_encode.update({"iat": datetime.utcnow(), "exp": expire})
         token = jwt.encode(to_encode, self.SECRET_KEY, algorithm=self.ALGORITHM)
         return token
 
-    async def get_email_from_token(self, token: str):
+    async def get_email_from_token(self, token: str) -> str:
         try:
             payload = jwt.decode(token, self.SECRET_KEY, algorithms=[self.ALGORITHM])
             email = payload["sub"]
@@ -103,7 +106,7 @@ class Auth:
             raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
                                 detail="Invalid token for email verification")
 
-    async def get_password_from_token(self, token: str):
+    async def get_password_from_token(self, token: str) -> str:
         try:
             payload = jwt.decode(token, self.SECRET_KEY, algorithms=[self.ALGORITHM])
             password = payload["pass"]

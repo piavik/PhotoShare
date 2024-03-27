@@ -4,7 +4,6 @@ from sqlalchemy.orm import Session
 from app.src.database.models import User
 from app.src.schemas import UserModel
 from app.src.services.auth import auth_service
-from app.src.services.email import send_password_email
 
 
 async def get_user_by_email(email: str, db: Session) -> User | None:
