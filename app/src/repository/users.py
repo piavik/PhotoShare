@@ -55,3 +55,15 @@ def update_password(user: User, new_password: str, db: Session) -> str:
     user.password = hashed_password
     db.commit()
     return "Password was changed"
+
+
+def ban_user(user: User, db: Session) -> str:
+    user.banned = True
+    db.commit()
+    return f"{user.username} has been banned"
+
+
+def unban_user(user: User, db: Session) -> str:
+    user.banned = False
+    db.commit()
+    return f"{user.username} has been unbanned"

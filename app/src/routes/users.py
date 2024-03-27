@@ -89,3 +89,21 @@ async def reset_password(token: str, db: Session = Depends(get_db)):
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Verification error")
     repository_users.update_password(user, password, db)
     return {"message": "Password reset"}
+
+
+@router.patch('/ban')
+async def ban_user(email: str, _: User = Depends(RoleChecker(['admin'])), db: Session = Depends(get_db)):
+    user = await repository_users.get_user_by_email(email, db)
+    if user is None:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Verification error")
+    red.delete(f"user:{user.email}")
+    return repository_users.ban_user(user, db)
+
+
+@router.patch('/unban')
+async def unban_user(email: str, _: User = Depends(RoleChecker(['admin'])), db: Session = Depends(get_db)):
+    user = await repository_users.get_user_by_email(email, db)
+    if user is None:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="verification error")
+    red.delete(f"user:{user.email}")
+    return repository_users.unban_user(user, db)

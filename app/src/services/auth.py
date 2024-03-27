@@ -83,6 +83,8 @@ class Auth:
             user = await repository_users.get_user_by_email(email, db)
             if user is None:
                 raise credentials_exception
+            elif user.banned:
+                raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="User is banned")
             self.r.set(f"user:{email}", pickle.dumps(user))
             self.r.expire(f"user:{email}", 900)
         else:
