@@ -20,7 +20,7 @@ engine = create_engine(SQLALCHEMY_DATABASE_URL,
 TestingSessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 
 
-@pytest.fixture(scope="module")
+@pytest.fixture(scope="session")
 def session():
     # Create the database for tests
 
@@ -33,7 +33,7 @@ def session():
     finally:
         db.close()
 
-@pytest.fixture(scope="module")
+@pytest.fixture(scope="session")
 def client(session) -> TestClient:
     # Dependency override
 
@@ -49,7 +49,7 @@ def client(session) -> TestClient:
         yield client
 
 
-@pytest.fixture(scope="module")
+@pytest.fixture(scope="session")
 def user():
     return {"username": "biakabuka", 
             "email": "buka@example.com", 

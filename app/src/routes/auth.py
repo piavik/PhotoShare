@@ -9,7 +9,7 @@ from app.src.services.auth import auth_service
 from app.src.services.email import send_email
 
 import app.src.services.logging as log
-router = APIRouter(prefix="/auth", tags=["auth"], route_class=log.LoggingRoute)
+router = APIRouter(prefix="/auth", tags=["auth"], route_class=log.LoggingRoute) # for debug
 # router = APIRouter(prefix="/auth", tags=["auth"])
 
 security = HTTPBearer()
