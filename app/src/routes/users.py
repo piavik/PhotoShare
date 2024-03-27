@@ -92,10 +92,12 @@ async def reset_password(token: str, db: Session = Depends(get_db)):
 
 
 @router.patch('/ban')
-async def ban_user(email: str, _: User = Depends(RoleChecker(['admin'])), db: Session = Depends(get_db)):
+async def ban_user(email: str, current_user: User = Depends(RoleChecker(['admin'])), db: Session = Depends(get_db)):
     user = await repository_users.get_user_by_email(email, db)
     if user is None:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Verification error")
+    elif user.email == current_user.email:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="You cannot ban yourself")
     red.delete(f"user:{user.email}")
     return repository_users.ban_user(user, db)
 
