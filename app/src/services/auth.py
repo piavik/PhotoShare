@@ -84,7 +84,7 @@ class Auth:
             if user is None:
                 raise credentials_exception
             elif user.banned:
-                raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="User is banned")
+                raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="You has been banned")
             self.r.set(f"user:{email}", pickle.dumps(user))
             self.r.expire(f"user:{email}", 900)
         else:
