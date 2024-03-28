@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends, UploadFile, File, Form, status, HTTPException
+from fastapi import APIRouter, Depends, UploadFile, File, Form, status, HTTPException, Query
 from fastapi.responses import StreamingResponse
 from sqlalchemy.orm import Session
 import cloudinary
@@ -95,9 +95,9 @@ async def delete_photo(
 
     if current_user.role != "admin":
         if photo.owner_id != current_user.id:
-                raise HTTPException(
-                    status_code=403, detail="Not enought rights to delete this photo"
-                )
+            raise HTTPException(
+                status_code=403, detail="Not enought rights to delete this photo"
+            )
 
     public_id = photo.photo_url.split("/")[-1].split(".")[0]
     result = cloudinary.uploader.destroy(public_id=public_id, invalidate=True)
@@ -105,6 +105,19 @@ async def delete_photo(
     await repository_photos.delete_photo(db, photo_id, photo.owner_id)
 
     return {"detail": "Photo succesfuly deleted"}
+
+
+@router.get("/find_photos", response_model=list[PhotoDetailedResponse])
+async def get_photos_by_key_word(
+    key_word: str = "",
+    db: Session = Depends(get_db),
+):
+    if not key_word.strip():
+        raise HTTPException(status_code=404, detail="No key word provided")
+    photos = await repository_photos.find_photos(db, key_word)
+    if not photos:
+        raise HTTPException(status_code=404, detail=f"No photos found by key word '{key_word}'")
+    return photos
 
 
 @router.get("/{photo_id}", response_model=PhotoDetailedResponse)
@@ -128,22 +141,21 @@ async def update_photo_tags(
     photo = await repository_photos.get_photo_by_id(db, photo_id)
     if not photo:
         raise HTTPException(status_code=404, detail="Photo not found")
+
     if current_user.role != "admin":
         if photo.owner_id != current_user.id:
             raise HTTPException(
                 status_code=403, detail="Not enough rights to edit tags of this photo"
             )
 
-    new_tags_list = [tag for tag in tags.strip().split(" ") if tag]
-
-    if not new_tags_list:
+    if not tags.strip().split():
         raise HTTPException(
-            status_code=400, detail="No valid tags provided, existing tags remain unchanged"
+            status_code=400,
+            detail="No valid tags provided, existing tags remain unchanged",
         )
 
-    updated_photo = await repository_photos.edit_photo_tags(
-        db, photo_id, current_user.id, new_tags_list
-    )
+    updated_photo = await repository_photos.edit_photo_tags(db, photo_id, current_user.id, tags)
+
     if not updated_photo:
         raise HTTPException(status_code=404, detail="Failed to update tags")
 
@@ -185,7 +197,7 @@ async def update_description(
     )
 
 
-@router.put("/{photo_id}/transform", response_model=PhotoDetailedResponse)
+@router.post("/{photo_id}/transform", response_model=PhotoDetailedResponse)
 async def transform_photo(
     photo_id: int,
     width: Optional[int] = Form(None),
@@ -234,27 +246,20 @@ async def transform_photo(
 
         transformed_photo = await repository_photos.create_photo(
             db,
-            PhotoModel(photo_url = new_url,
-                owner_id = current_user.id,
+            PhotoModel(
+                photo_url=new_url,
+                owner_id=current_user.id,
                 description=f"This is a transformed version of photo id {photo_id}",
             ),
             user_id=current_user.id,
-            tags_list=[]
+            tags_list=[],
         )
     else:
         raise HTTPException(status_code=400, detail="No transformations provided")
 
-    return photo
-
-
-@router.post("/photos/{photo_id}/transformed_photo_qr", status_code=status.HTTP_201_CREATED)
-async def get_photo_qr(photo_id: int,db: Session = Depends(get_db),):
     photo = await repository_photos.get_photo_by_id(db, photo_id)
-
-    if not photo:
-        raise HTTPException(status_code=404, detail="Photo not found")
-
     transformed_photo_url = photo.changed_photo_url
+
     if not transformed_photo_url:
         raise HTTPException(status_code=404, detail="Transformed photo URL not found")
 
