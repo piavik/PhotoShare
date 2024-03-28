@@ -11,7 +11,7 @@ from app.src.database.models import Base
 # from src.models.schemas import UserModel
 
 
-SQLALCHEMY_DATABASE_URL = "sqlite:///./tests/test.db"
+SQLALCHEMY_DATABASE_URL = "sqlite:///./tests/db.sqlite3"
 
 engine = create_engine(SQLALCHEMY_DATABASE_URL,
                        connect_args={"check_same_thread": False},) 
@@ -20,7 +20,7 @@ engine = create_engine(SQLALCHEMY_DATABASE_URL,
 TestingSessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 
 
-@pytest.fixture(scope="session")
+@pytest.fixture(scope="module")
 def session():
     # Create the database for tests
 
@@ -33,7 +33,7 @@ def session():
     finally:
         db.close()
 
-@pytest.fixture(scope="session")
+@pytest.fixture(scope="module")
 def client(session) -> TestClient:
     # Dependency override
 
@@ -61,3 +61,27 @@ def patch_fastapi_limiter(monkeypatch):
     monkeypatch.setattr("fastapi_limiter.FastAPILimiter.redis", AsyncMock())
     monkeypatch.setattr("fastapi_limiter.FastAPILimiter.identifier", AsyncMock())
     monkeypatch.setattr("fastapi_limiter.FastAPILimiter.http_callback", AsyncMock()) 
+
+@pytest.fixture(scope="function")
+def token(monkeypatch):
+    return "somestring"
+
+@pytest.fixture(scope="function")
+def token02(monkeypatch):
+    return "somestring"
+
+@pytest.fixture(scope="function")
+def admin_token(monkeypatch):
+    return "somestring"
+
+@pytest.fixture(scope="function")
+def moder_token(monkeypatch):
+    return "somestring"
+
+@pytest.fixture(scope="function")
+def photo(monkeypatch):
+    return {"id": 1,
+        "file": "somestring",
+        "description": "some description",
+        "tags": ["first", "second", "third", "fourth", "fifths" ]
+    }

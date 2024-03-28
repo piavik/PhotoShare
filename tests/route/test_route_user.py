@@ -6,7 +6,7 @@ from app.src.database.models import User
 from app.src.services.auth import RoleChecker
 
 #---- me ----
-def test_user_info(client, session, user, monkeypatch):
+def test_read_users_me_ok(client, session, user, monkeypatch):
     current_user = user
     # current_user: User = (
     #     session.query(User).filter(User.email == user.get("email")).first()
@@ -20,6 +20,7 @@ def test_user_info(client, session, user, monkeypatch):
     data = response.json()
     assert data["user"]["username"] == user.get("username")
     assert data["user"]["email"] == user.get("email")
+
 
 # def test_avatar(client, session, user, monkeypatch):
 #     ...
