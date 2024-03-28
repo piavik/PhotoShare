@@ -4,9 +4,11 @@ from sqlalchemy.orm import Session
 
 from app.src.schemas import UserResponse, UserModel, TokenModel, RequestEmail
 from app.src.database.db import get_db
+from app.src.database.models import User
 from app.src.repository import users as repository_users
-from app.src.services.auth import auth_service
+from app.src.services.auth import auth_service, RoleChecker
 from app.src.services.email import send_email
+from app.src.routes.users import red
 
 import app.src.services.logging as log
 router = APIRouter(prefix="/auth", tags=["auth"], route_class=log.LoggingRoute) # for debug
@@ -78,3 +80,12 @@ async def request_email(body: RequestEmail, background_tasks: BackgroundTasks, r
     if user:
         background_tasks.add_task(send_email, user.email, user.username, request.base_url)
     return {"message": "Check your email for confirmation."}
+
+
+@router.post('/logout')
+async def logout(token: str = Depends(auth_service.oauth2_scheme),
+                 _: User = Depends(RoleChecker(allowed_roles=["user"]))):
+    red.set(token, 1)
+    red.expire(token, 900)
+    return {"message": "Logged out"}
+

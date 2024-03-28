@@ -24,6 +24,16 @@ class UserResponse(BaseModel):
     detail: str = "User successfully created"
 
 
+class UserPassword(BaseModel):
+    old_password: str = Field(min_length=6, max_length=20)
+    new_password: str = Field(min_length=6, max_length=20)
+
+
+class UserNewPassword(BaseModel):
+    email: EmailStr
+    new_password: str = Field(min_length=6, max_length=20)
+
+
 class TokenModel(BaseModel):
     access_token: str
     refresh_token: str
@@ -55,3 +65,15 @@ class PhotoResponse(BaseModel):
 
 class TagModel(BaseModel):
     name: constr(strip_whitespace=True, min_length=1, max_length=40)
+
+
+class PhotoDetailedResponse(BaseModel):
+    id: int
+    photo_url: HttpUrl
+    changed_photo_url: HttpUrl | None
+    owner_id: int
+    description: Optional[str] = None
+    tags: List[TagModel] = []
+    created_at: datetime
+    updated_at: datetime
+    model_config = ConfigDict(from_attributes=True)

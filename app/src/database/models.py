@@ -56,3 +56,4 @@ class User(BaseTable):
     refresh_token: Mapped[String] = mapped_column(String(255), nullable=True)
     confirmed: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
     avatar: Mapped[String] = mapped_column(String(255), nullable=True)
+    banned: Mapped[bool] = mapped_column(Boolean, default=False)
