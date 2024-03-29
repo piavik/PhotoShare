@@ -5,6 +5,14 @@ from unittest.mock import MagicMock #, patch
 from app.src.database.models import User
 from app.src.services.auth import auth_service
 
+# @pytest.fixture()
+# def token(client, user):
+#     response = client.post(
+#         "/api/auth/login",
+#         data={"username": user.get('email'), "password": user.get('password')},
+#     )
+#     token = response.json()
+#     return token
 
 #---- signup ----
 def test_signup_ok(client, user, monkeypatch):
@@ -82,9 +90,11 @@ def test_login_fail_user_not_confirmed(client, session, user):
 
 #---- refresh token ----
 # requred user to be authenticated
-def test_refresh_token_ok(client, session, user, monkeypatch):
+def test_refresh_token_ok(client, token02):
+    # authenticate via token
     response = client.get(
-        "/api/auth/refresh"
+        "/api/auth/refresh",
+        headers={'Authorization': f'Bearer {token02.get("refresh_token")}'}
     )
     assert response.status_code == 200
     data = response.json()
@@ -125,7 +135,7 @@ def test_refresh_token_ok(client, session, user, monkeypatch):
 #     with patch("get_email_from_token") as mock:     # testing
 #         yield mock
 
-def test_confirm_email_ok(client, session, user):
+def test_confirm_email_ok(client, user):
     token_data = {"sub": user.get("email"), "iat": 1710719280, "exp": 2710719280, "scope": "email_token"}
     token = jwt.encode(token_data, auth_service.SECRET_KEY, algorithm=auth_service.ALGORITHM)
     response = client.get(
@@ -136,7 +146,7 @@ def test_confirm_email_ok(client, session, user):
     data = response.json()
     assert data['message'] == "Email confirmed"
 
-def test_confirm_email_ok_already_confirmed(client, session, user):
+def test_confirm_email_ok_already_confirmed(client, user):
     token_data = {"sub": user.get("email"), "iat": 1710719280, "exp": 2710719280, "scope": "email_token"}
     token = jwt.encode(token_data, auth_service.SECRET_KEY, algorithm=auth_service.ALGORITHM)
     response = client.get(
@@ -147,7 +157,7 @@ def test_confirm_email_ok_already_confirmed(client, session, user):
     data = response.json()
     assert data['message'] == "Your email is already confirmed"
 
-def test_confirm_email_fail_user_not_found(client, session, user):
+def test_confirm_email_fail_user_not_found(client):
     token_data = {"sub": "some_incorrect_email@here.com", "iat": 1710719280, "exp": 2710719280, "scope": "email_token"}
     token = jwt.encode(token_data, auth_service.SECRET_KEY, algorithm=auth_service.ALGORITHM)
     response = client.get(
@@ -157,7 +167,7 @@ def test_confirm_email_fail_user_not_found(client, session, user):
     data = response.json()
     assert data['detail'] == "Verification error"
 
-def test_confirm_email_fail_wrong_token_scope(client, session, user):
+def test_confirm_email_fail_wrong_token_scope(client, user):
     token_data = {"sub": user.get("email"), "iat": 1710719280, "exp": 2710719280, "scope": "refresh_token"}
     token = jwt.encode(token_data, auth_service.SECRET_KEY, algorithm=auth_service.ALGORITHM)
     response = client.get(
@@ -167,7 +177,7 @@ def test_confirm_email_fail_wrong_token_scope(client, session, user):
     data = response.json()
     assert data['detail'] == "Invalid token for email verification"
 
-def test_confirm_email_fail_wrong_token_expired(client, session, user):
+def test_confirm_email_fail_wrong_token_expired(client, user):
     token_data = {"sub": user.get("email"), "iat": 1710719280, "exp": 1710721280, "scope": "email_token"}
     token = jwt.encode(token_data, auth_service.SECRET_KEY, algorithm=auth_service.ALGORITHM)
     response = client.get(
@@ -178,14 +188,23 @@ def test_confirm_email_fail_wrong_token_expired(client, session, user):
     assert data['detail'] == "Invalid token for email verification"
 
 #---- request email ----
-# def test_request_email_ok(client, session, user, monkeypatch):
+# def test_request_email_ok(client, user):
 #     ...
 
-# def test_request_email_fail_random_string_not_email(client, session, user, monkeypatch):
+# def test_request_email_fail_random_string_not_email(client, user):
 #     ...
 
-# def test_request_email_fail_user_not_found(client, session, user, monkeypatch):
+# def test_request_email_fail_user_not_found(client, user):
 #     ...
 
-# def test_request_email_fail_user_not_confirmed(client, session, user, monkeypatch):
+# def test_request_email_fail_user_not_confirmed(client, user):
 #     ...
+
+
+#---- logout ----
+
+
+
+if __name__ == "__main__":
+    unittest.main()    
+    

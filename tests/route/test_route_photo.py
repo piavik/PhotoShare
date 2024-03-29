@@ -148,14 +148,19 @@ def test_update_photo_tags_fail_error(client, token, photo):
     )
     assert response.status_code == 422
 
-# update description
-def test_update_description_ok():
-    ...
+# # update description
+# def test_update_description_ok():
+#     ...
 
-# transform
-def transform_photo():
-    ...
+# # transform
+# def transform_photo():
+#     ...
 
-# qr
-def test_get_photo_qr_ok():
-    ...
+# # qr
+# def test_get_photo_qr_ok():
+#     ...
+
+
+if __name__ == "__main__":
+    unittest.main()    
+    

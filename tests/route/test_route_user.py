@@ -51,3 +51,9 @@ def test_read_users_me_ok(client, session, user, monkeypatch):
 
 # def test_change_role_fail_moder_user(client, session, user, monkeypatch):
 #     ...
+
+
+
+if __name__ == "__main__":
+    unittest.main()    
+    

@@ -10,7 +10,7 @@ engine = create_engine(SQLALCHEMY_DATABASE_URL)
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 
 class TestdConnectDB(unittest.TestCase):
-    async def test_get_db(self):
+    def test_get_db(self):
         result = get_db()
         self.assertIsNotNone(result)
         another_result = get_db()
