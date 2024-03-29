@@ -1,36 +1,28 @@
 from fastapi import APIRouter, Depends, UploadFile, File, Form, status, HTTPException, Query
 from fastapi.responses import StreamingResponse
 from sqlalchemy.orm import Session
-import cloudinary
-import cloudinary.uploader
-from cloudinary.uploader import destroy
-from typing import Optional, List
+from typing import Optional, List, Union
 from datetime import date
-import qrcode
-from io import BytesIO
 
 from app.src.schemas import (
     PhotoResponse,
     PhotoModel,
     PhotoDb,
     PhotoDetailedResponse,
+    SortOptions,
+    ResponceOptions,
+    UrlResponse,
     TagModel,
 )
 from app.src.database.db import get_db
 from app.src.database.models import User, Photo
 from app.src.repository import photos as repository_photos
 from app.src.services.auth import auth_service, RoleChecker
+from app.src.services.qr_code_service import generate_qr_code
+from app.src.services import cloudinary_services
 from app.src.conf.config import settings
 
 router = APIRouter(prefix="/photos", tags=["photos"])
-
-cloudinary.config(
-    cloud_name=settings.cloudinary_name,
-    api_key=settings.cloudinary_api_key,
-    api_secret=settings.cloudinary_api_secret,
-    secure=True,
-)
-
 
 @router.post(
     "/upload", response_model=PhotoResponse, status_code=status.HTTP_201_CREATED
@@ -44,7 +36,7 @@ async def create_photo(
 ):
     tags_list = tags.strip().split(" ")
     file.file.seek(0)
-    upload_result = cloudinary.uploader.upload(file.file)
+    upload_result = await cloudinary_services.upload_photo(file.file) 
 
     if not upload_result:
         raise HTTPException(
@@ -100,9 +92,7 @@ async def delete_photo(
                 status_code=403, detail="Not enought rights to delete this photo"
             )
 
-    public_id = photo.photo_url.split("/")[-1].split(".")[0]
-    result = cloudinary.uploader.destroy(public_id=public_id, invalidate=True)
-
+    await cloudinary_services.delete_photo(photo.photo_url)
     await repository_photos.delete_photo(db, photo_id, photo.owner_id)
 
     return {"detail": "Photo succesfuly deleted"}
@@ -111,37 +101,37 @@ async def delete_photo(
 @router.get("/find_photos", response_model=list[PhotoDetailedResponse])
 async def get_photos_by_key_word(
     db: Session = Depends(get_db),
-    key_word: str = Query(None, description="Sort by 'Print key word"),
-    sort_by: str = Query(None, description="Sort by 'raiting' or 'date'"),
+    key_word: str = Query(None, description="Print key word"),
+    sort_by: SortOptions = Query(None, description="Sort by 'raiting' or 'date'"),
     min_raiting: float = Query(None, description="Minimum rating filter"),
     max_rating: float = Query(None, description="Maximum rating filter"),
     start_date: date = Query(None, description="Start date for filtering (YYYY-MM-DD)"),
     end_date: date = Query(None, description="End date for filtering (YYYY-MM-DD)"),
 ):
-    if not key_word.strip():
+    if not key_word:
         raise HTTPException(status_code=404, detail="No key word provided")
 
-    photos = await repository_photos.find_photos(db, 
-                                                 key_word,
-                                                 sort_by,
-                                                 min_raiting,
-                                                 max_rating,
-                                                 start_date,
-                                                 end_date)
+    photos = await repository_photos.find_photos(db, key_word, sort_by, min_raiting, max_rating, start_date, end_date)
 
     if not photos:
         raise HTTPException(status_code=404, detail=f"No photos found by key word '{key_word}'")
     return photos
 
 
-@router.get("/{photo_id}", response_model=PhotoDetailedResponse)
+@router.get("/{photo_id}", response_model=Union[PhotoDetailedResponse, UrlResponse])
 async def read_photo(
     photo_id: int,
     db: Session = Depends(get_db),
+    response_type: ResponceOptions = Query(default=ResponceOptions.detailed, description="Select a response option")
 ):
     photo = await repository_photos.get_photo_by_id(db, photo_id)
     if not photo:
         raise HTTPException(status_code=404, detail="Photo not found")
+    if response_type == ResponceOptions.url:
+        return UrlResponse(url=photo.photo_url)
+    if response_type == ResponceOptions.qr_code:
+        img_io = generate_qr_code(photo.photo_url)
+        return StreamingResponse(img_io, media_type="image/png")
     return photo
 
 
@@ -238,27 +228,21 @@ async def transform_photo(
                 status_code=403, detail="Not enought rights to transform this photo"
             )
 
-    transformations = []
-    if width:
-        transformations.append(f"w_{width}")
-    if height:
-        transformations.append(f"h_{height}")
-    if crop:
-        transformations.append(f"c_{crop}")
-    if angle:
-        transformations.append(f"a_{angle}")
-    if filter:
-        transformations.append(f"e_{filter}")
-    if gravity:
-        transformations.append(f"g_{gravity}")
+    new_url = await cloudinary_services.transformed_photo_url(
+        photo_url=photo.photo_url,
+        width=width,
+        height=height,
+        crop=crop,
+        angle=angle,
+        filter=filter,
+        gravity=gravity,
+        )
+    if not new_url:
+        raise HTTPException(status_code=400, detail="No transformations provided")
 
-    transformation_string = ",".join(transformations)
-    if transformation_string:
-        public_id = photo.photo_url.split("/")[-1].split(".")[0]
-        new_url = f"https://res.cloudinary.com/{cloudinary.config().cloud_name}/image/upload/{transformation_string}/{public_id}.jpg"
-        photo.changed_photo_url = new_url
+    photo.changed_photo_url = new_url
 
-        transformed_photo = await repository_photos.create_photo(
+    await repository_photos.create_photo(
             db,
             PhotoModel(
                 photo_url=new_url,
@@ -268,8 +252,6 @@ async def transform_photo(
             user_id=current_user.id,
             tags_list=[],
         )
-    else:
-        raise HTTPException(status_code=400, detail="No transformations provided")
 
     photo = await repository_photos.get_photo_by_id(db, photo_id)
     transformed_photo_url = photo.changed_photo_url
@@ -277,19 +259,6 @@ async def transform_photo(
     if not transformed_photo_url:
         raise HTTPException(status_code=404, detail="Transformed photo URL not found")
 
-    qr = qrcode.QRCode(
-        version=1,
-        error_correction=qrcode.constants.ERROR_CORRECT_L,
-        box_size=10,
-        border=4,
-    )
-    qr.add_data(transformed_photo_url)
-    qr.make(fit=True)
-
-    img = qr.make_image(fill_color="black", back_color="white")
-
-    img_io = BytesIO()
-    img.save(img_io, format="PNG")
-    img_io.seek(0)
+    img_io = generate_qr_code(transformed_photo_url)
 
     return StreamingResponse(img_io, media_type="image/png")
