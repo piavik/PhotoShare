@@ -1,5 +1,7 @@
-from typing import List
+from typing import List, Optional
+from datetime import date
 from sqlalchemy.orm import Session
+from sqlalchemy import or_
 from pydantic import ValidationError
 
 from app.src.database.models import Photo, Tag
@@ -26,16 +28,22 @@ async def get_photo_by_id(db: Session, photo_id: int):
 
 
 async def edit_photo_tags(
-    db: Session, photo_id: int, user_id: int, new_tags_list: List[str]
+    db: Session, photo_id: int, user_id: int, new_tags: str
 ):
-    photo = (
-        db.query(Photo).filter(Photo.id == photo_id, Photo.owner_id == user_id).first()
-    )
+    photo = db.query(Photo).filter(Photo.id == photo_id, Photo.owner_id == user_id).first()
+
     if not photo:
         return None
 
+    tags_list = [tag for tag in new_tags.strip().split(" ") if tag]
+
+    new_tags = process_tags(db, tags_list)
+    print(new_tags)
+
+    if not new_tags:
+        return None
+     
     photo.tags.clear()
-    new_tags = process_tags(db, new_tags_list)
     photo.tags = new_tags
 
     db.commit()
@@ -85,3 +93,44 @@ async def delete_photo(db: Session, photo_id: int, user_id: int):
     db.delete(photo)
     db.commit()
     return True
+
+
+async def find_photos(db: Session, 
+                      key_word: Optional[str] = None,
+                      sort_by: Optional[str] = None,
+                      min_rating: Optional[float] = None,
+                      max_rating: Optional[float] = None,
+                      start_date: Optional[date] = None,
+                      end_date: Optional[date] = None,
+                      ):
+
+    q = key_word.strip()
+    if not q:
+        return []
+
+    photos = db.query(Photo).filter(
+            or_(
+                Photo.description.ilike(f"%{q}%"),
+                Photo.tags.any(Tag.name.ilike(f"%{q}%")),
+            )
+        )
+
+
+    if min_rating is not None:
+        photos = photos.filter(Photo.rating >= min_rating)
+
+    if max_rating is not None:
+        photos = photos.filter(Photo.rating <= max_rating)
+
+    if start_date:
+        photos = photos.filter(Photo.created_at >= start_date)
+
+    if end_date:
+        photos = photos.filter(Photo.created_at <= end_date)
+
+    if sort_by == 'rating':
+        photos = photos.order_by(Photo.rating.desc())
+    elif sort_by == 'date':
+        photos = photos.order_by(Photo.created_at.desc())
+        
+    return photos.all()
