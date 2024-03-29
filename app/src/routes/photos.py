@@ -5,6 +5,7 @@ import cloudinary
 import cloudinary.uploader
 from cloudinary.uploader import destroy
 from typing import Optional, List
+from datetime import date
 import qrcode
 from io import BytesIO
 
@@ -109,12 +110,25 @@ async def delete_photo(
 
 @router.get("/find_photos", response_model=list[PhotoDetailedResponse])
 async def get_photos_by_key_word(
-    key_word: str = "",
     db: Session = Depends(get_db),
+    key_word: str = Query(None, description="Sort by 'Print key word"),
+    sort_by: str = Query(None, description="Sort by 'raiting' or 'date'"),
+    min_raiting: float = Query(None, description="Minimum rating filter"),
+    max_rating: float = Query(None, description="Maximum rating filter"),
+    start_date: date = Query(None, description="Start date for filtering (YYYY-MM-DD)"),
+    end_date: date = Query(None, description="End date for filtering (YYYY-MM-DD)"),
 ):
     if not key_word.strip():
         raise HTTPException(status_code=404, detail="No key word provided")
-    photos = await repository_photos.find_photos(db, key_word)
+
+    photos = await repository_photos.find_photos(db, 
+                                                 key_word,
+                                                 sort_by,
+                                                 min_raiting,
+                                                 max_rating,
+                                                 start_date,
+                                                 end_date)
+
     if not photos:
         raise HTTPException(status_code=404, detail=f"No photos found by key word '{key_word}'")
     return photos
@@ -131,7 +145,7 @@ async def read_photo(
     return photo
 
 
-@router.put("/{photo_id}/tags", response_model=PhotoDetailedResponse)
+@router.patch("/{photo_id}/tags", response_model=PhotoDetailedResponse)
 async def update_photo_tags(
     photo_id: int,
     tags: str = Form("", description="Print your tags separated with space"),
@@ -162,7 +176,7 @@ async def update_photo_tags(
     return updated_photo
 
 
-@router.put("/{photo_id}/description", response_model=PhotoResponse)
+@router.patch("/{photo_id}/description", response_model=PhotoResponse)
 async def update_description(
     photo_id: int,
     description: str = Form(...),

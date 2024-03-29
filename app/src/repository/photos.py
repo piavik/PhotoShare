@@ -1,4 +1,5 @@
-from typing import List
+from typing import List, Optional
+from datetime import date
 from sqlalchemy.orm import Session
 from sqlalchemy import or_
 from pydantic import ValidationError
@@ -94,19 +95,42 @@ async def delete_photo(db: Session, photo_id: int, user_id: int):
     return True
 
 
-async def find_photos(db: Session, key_word: str = None):
+async def find_photos(db: Session, 
+                      key_word: Optional[str] = None,
+                      sort_by: Optional[str] = None,
+                      min_rating: Optional[float] = None,
+                      max_rating: Optional[float] = None,
+                      start_date: Optional[date] = None,
+                      end_date: Optional[date] = None,
+                      ):
+
     q = key_word.strip()
     if not q:
         return []
 
-    photos = (
-        db.query(Photo)
-        .filter(
+    photos = db.query(Photo).filter(
             or_(
                 Photo.description.ilike(f"%{q}%"),
                 Photo.tags.any(Tag.name.ilike(f"%{q}%")),
             )
         )
-        .all()
-    )
-    return photos
+
+
+    if min_rating is not None:
+        photos = photos.filter(Photo.rating >= min_rating)
+
+    if max_rating is not None:
+        photos = photos.filter(Photo.rating <= max_rating)
+
+    if start_date:
+        photos = photos.filter(Photo.created_at >= start_date)
+
+    if end_date:
+        photos = photos.filter(Photo.created_at <= end_date)
+
+    if sort_by == 'rating':
+        photos = photos.order_by(Photo.rating.desc())
+    elif sort_by == 'date':
+        photos = photos.order_by(Photo.created_at.desc())
+        
+    return photos.all()

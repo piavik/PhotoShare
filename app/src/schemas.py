@@ -74,6 +74,7 @@ class PhotoDetailedResponse(BaseModel):
     owner_id: int
     description: Optional[str] = None
     tags: List[TagModel] = []
+    rating: float
     created_at: datetime
     updated_at: datetime
     model_config = ConfigDict(from_attributes=True)
