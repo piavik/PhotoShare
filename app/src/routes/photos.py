@@ -24,16 +24,31 @@ from app.src.conf.config import settings
 
 router = APIRouter(prefix="/photos", tags=["photos"])
 
-@router.post(
-    "/upload", response_model=PhotoResponse, status_code=status.HTTP_201_CREATED
-)
+@router.post("/upload", response_model=PhotoResponse, status_code=status.HTTP_201_CREATED)
 async def create_photo(
-    file: UploadFile = File(...),
-    description: str = Form(...),
-    tags: str = Form(""),
-    current_user: User = Depends(auth_service.get_current_user),
-    db: Session = Depends(get_db),
-):
+        file: UploadFile = File(...),
+        description: str = Form(...),
+        tags: str = Form(""),
+        current_user: User = Depends(auth_service.get_current_user),
+        db: Session = Depends(get_db),
+    ):
+    """
+    **Create photo endpoint**
+
+    Args:
+    - file (UploadFile, optional): File to upload
+    - description (str, optional): File description
+    - tags (str, optional): tags for the photo
+    - current_user (User, optional): current user
+    - db (Session, optional): database session.
+
+    Raises:
+    - HTTPException: 500 Failed to upload photo
+    - HTTPException: 500 Failed to retrieve secure URL for photo
+
+    Returns:
+    - [PhotoResponse]: response object 
+    """    
     tags_list = tags.strip().split(" ")
     file.file.seek(0)
     upload_result = await cloudinary_services.upload_photo(file.file) 
@@ -77,10 +92,25 @@ async def create_photo(
 
 @router.delete("/{photo_id}")
 async def delete_photo(
-    photo_id: int,
-    current_user: User = Depends(auth_service.get_current_user),
-    db: Session = Depends(get_db),
-):
+        photo_id: int,
+        current_user: User = Depends(auth_service.get_current_user),
+        db: Session = Depends(get_db),
+    ) -> dict:
+    """
+    **Delete photo endpoint**
+
+    Args:
+    - photo_id (int): ID of the photo
+    - current_user (User, optional): current user
+    - db (Session, optional): database session
+
+    Raises:
+    - HTTPException: 403 Not enought rights to delete this photo
+    - HTTPException: 404 Photo not found
+
+    Returns:
+    - message: message
+    """    
     photo = db.query(Photo).filter(Photo.id == photo_id).first()
 
     if not photo:
@@ -100,16 +130,35 @@ async def delete_photo(
 
 @router.get("/find_photos", response_model=list[PhotoDetailedResponse])
 async def get_photos_by_key_word(
-    db: Session = Depends(get_db),
-    key_word: str = Query(None, description="Print key word"),
-    sort_by: SortOptions = Query(None, description="Sort by 'raiting' or 'date'"),
-    min_raiting: float = Query(None, description="Minimum rating filter"),
-    max_rating: float = Query(None, description="Maximum rating filter"),
-    start_date: date = Query(None, description="Start date for filtering (YYYY-MM-DD)"),
-    end_date: date = Query(None, description="End date for filtering (YYYY-MM-DD)"),
-):
+        db: Session = Depends(get_db),
+        key_word: str = Query(None, description="Print key word"),
+        sort_by: SortOptions = Query(None, description="Sort by 'raiting' or 'date'"),
+        min_raiting: float = Query(None, description="Minimum rating filter"),
+        max_rating: float = Query(None, description="Maximum rating filter"),
+        start_date: date = Query(None, description="Start date for filtering (YYYY-MM-DD)"),
+        end_date: date = Query(None, description="End date for filtering (YYYY-MM-DD)"),
+    ):
+    """
+    **Endpoint for photo searching**
+
+    Args:
+    - db (Session, optional): database session
+    - key_word (str, optional): Keyword to search for. Defaults to None
+    - sort_by (SortOptions, optional): Sort by 'raiting' or 'date'. Defaults to No sorting
+    - min_raiting (float, optional): Minimum rating filter. Defaults to None
+    - max_rating (float, optional): Maximum rating filter. Defaults to None
+    - start_date (date, optional): Start date for filtering (YYYY-MM-DD). Defaults to None
+    - end_date (date, optional): End date for filtering (YYYY-MM-DD). Defaults to None
+
+    Raises:
+    - HTTPException: 400 No key word provided
+    - HTTPException: 404 No photos found by keyword
+
+    Returns:
+    - list[PhotoDetailedResponse]: detailed responce of the photo pbject
+    """
     if not key_word:
-        raise HTTPException(status_code=404, detail="No key word provided")
+        raise HTTPException(status_code=400, detail="No key word provided")
 
     photos = await repository_photos.find_photos(db, key_word, sort_by, min_raiting, max_rating, start_date, end_date)
 
@@ -120,10 +169,24 @@ async def get_photos_by_key_word(
 
 @router.get("/{photo_id}", response_model=Union[PhotoDetailedResponse, UrlResponse])
 async def read_photo(
-    photo_id: int,
-    db: Session = Depends(get_db),
-    response_type: ResponceOptions = Query(default=ResponceOptions.detailed, description="Select a response option")
-):
+        photo_id: int,
+        db: Session = Depends(get_db),
+        response_type: ResponceOptions = Query(default=ResponceOptions.detailed, description="Select a response option")
+    ):
+    """
+    **Endpoint for getting photo by it's ID**
+
+    Args:
+    - photo_id (int): ID of the photo
+    - db (Session, optional): database session.
+    - response_type (ResponceOptions, optional): option for responce type. Defaults to detailed
+
+    Raises:
+    - HTTPException: 404 Photo not found
+
+    Returns:
+    - UrlResponse | StreamingResponse: either URL od QR code of the photo
+    """
     photo = await repository_photos.get_photo_by_id(db, photo_id)
     if not photo:
         raise HTTPException(status_code=404, detail="Photo not found")
@@ -137,11 +200,29 @@ async def read_photo(
 
 @router.patch("/{photo_id}/tags", response_model=PhotoDetailedResponse)
 async def update_photo_tags(
-    photo_id: int,
-    tags: str = Form("", description="Print your tags separated with space"),
-    current_user: User = Depends(auth_service.get_current_user),
-    db: Session = Depends(get_db),
-):
+        photo_id: int,
+        tags: str = Form("", description="Print your tags separated with space"),
+        current_user: User = Depends(auth_service.get_current_user),
+        db: Session = Depends(get_db),
+    ):
+    """
+    **Endpoint for editing tags of the photo**
+
+    Args:
+    - photo_id (int): ID of the photo
+    - tags (str, optional): List of tags, separated by whitespace. Defaults to empty string
+    - current_user (User, optional): current user
+    - db (Session, optional): database session
+
+    Raises:
+    - HTTPException: 404 Photo not found
+    - HTTPException: 403 Unsufficient permissions to edit tags of this photo
+    - HTTPException: 400 No valid tags provided, existing tags remain unchanged
+    - HTTPException: 400 Failed to update tags
+
+    Returns:
+    - [PhotoDetailedResponse]: detailed responce of the photo pbject
+    """
     photo = await repository_photos.get_photo_by_id(db, photo_id)
     if not photo:
         raise HTTPException(status_code=404, detail="Photo not found")
@@ -149,7 +230,7 @@ async def update_photo_tags(
     if current_user.role != "admin":
         if photo.owner_id != current_user.id:
             raise HTTPException(
-                status_code=403, detail="Not enough rights to edit tags of this photo"
+                status_code=403, detail="Unsufficient permissions to edit tags of this photo"
             )
 
     if not tags.strip().split():
@@ -161,18 +242,35 @@ async def update_photo_tags(
     updated_photo = await repository_photos.edit_photo_tags(db, photo_id, tags)
 
     if not updated_photo:
-        raise HTTPException(status_code=404, detail="Failed to update tags")
+        raise HTTPException(status_code=400, detail="Failed to update tags")
 
     return updated_photo
 
 
 @router.patch("/{photo_id}/description", response_model=PhotoResponse)
 async def update_description(
-    photo_id: int,
-    description: str = Form(...),
-    current_user: User = Depends(RoleChecker(allowed_roles=["user"])),
-    db: Session = Depends(get_db),
+        photo_id: int,
+        description: str = Form(...),
+        current_user: User = Depends(RoleChecker(allowed_roles=["user"])),
+        db: Session = Depends(get_db),
     ):
+    """
+    **Endpoint for updating the description of the photo**
+
+    Args:
+    - photo_id (int): ID of the photo
+    - description (str, optional): Photo description
+    - current_user (User, optional): current user
+    - db (Session, optional): database session
+
+    Raises:
+    - HTTPException: 400 Bad request
+    - HTTPException: 403 Unsufficient permissions to change the description to this photo
+    - HTTPException: 404 Photo not found
+
+    Returns:
+    - [PhotoResponse]: responce of the photo pbject
+    """    
     photo = await repository_photos.get_photo_by_id(db, photo_id)
     if not photo:
         raise HTTPException(status_code=404, detail="Photo not found")
@@ -180,7 +278,7 @@ async def update_description(
         if photo.owner_id != current_user.id:
             raise HTTPException(
                 status_code=403,
-                detail="Not enough rights to change the description to this photo",
+                detail="Unsufficient permissions to change the description to this photo",
             )
 
     try:
@@ -203,29 +301,50 @@ async def update_description(
 
 @router.post("/{photo_id}/transform", response_model=PhotoDetailedResponse)
 async def transform_photo(
-    photo_id: int,
-    width: Optional[int] = Form(None),
-    height: Optional[int] = Form(None),
-    crop: Optional[str] = Form(
-        None, description="Type of crop (scale, fill, fit, etc.)"
-    ),
-    angle: Optional[int] = Form(None),
-    filter: Optional[str] = Form(
-        None, description="Apply a filter (sepia, grayscale, etc.)"
-    ),
-    gravity: Optional[str] = Form(
-        None, description="Gravity for cropping (north, south, east, west, face, etc.)"
-    ),
-    current_user: User = Depends(RoleChecker(["user"])),
-    db: Session = Depends(get_db),
-):
+        photo_id: int,
+        width: Optional[int] = Form(None),
+        height: Optional[int] = Form(None),
+        crop: Optional[str] = Form(
+            None, description="Type of crop (scale, fill, fit, etc.)"
+        ),
+        angle: Optional[int] = Form(None),
+        filter: Optional[str] = Form(
+            None, description="Apply a filter (sepia, grayscale, etc.)"
+        ),
+        gravity: Optional[str] = Form(
+            None, description="Gravity for cropping (north, south, east, west, face, etc.)"
+        ),
+        current_user: User = Depends(RoleChecker(["user"])),
+        db: Session = Depends(get_db),
+    ):
+    """AI is creating summary for transform_photo
+
+    Args:
+    - photo_id (int): ID of the photo
+    - width (Optional[int], optional): picture width. Defaults to None
+    - height (Optional[int], optional): picture height. Defaults to None
+    - crop (Optional[str], optional): Type of crop (scale, fill, fit, etc.). Defaults to None
+    - angle (Optional[int], optional): rotation angle. Defaults to None
+    - filter (Optional[str], optional): "Apply a filter (sepia, grayscale, etc.). Defaults to  None
+    - gravity (Optional[str], optional): Gravity for cropping (north, south, east, west, face, etc.). Defaults to None
+    - current_user (User, optional): current user
+    - db (Session, optional): database session
+
+    Raises:
+    - HTTPException: 403 Unsufficient permissions to transform this photo
+    - HTTPException: 400 No transformations provided
+    - HTTPException: 404 Transformed photo URL not found
+
+    Returns:
+    - [PhotoDetailedResponse]: detailed responce of the photo pbject
+    """
     photo = await repository_photos.get_photo_by_id(db, photo_id)
     if not photo:
         raise HTTPException(status_code=404, detail="Photo not found")
     if current_user.role != "admin":
         if photo.owner_id != current_user.id:
             raise HTTPException(
-                status_code=403, detail="Not enought rights to transform this photo"
+                status_code=403, detail="Unsufficient permissions to transform this photo"
             )
 
     new_url = await cloudinary_services.transformed_photo_url(

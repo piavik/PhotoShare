@@ -10,6 +10,16 @@ async def get_user_by_email(email: str, db: Session) -> User | None:
 
 
 async def create_user(body: UserModel, db: Session) -> User:
+    """
+    **Create user**
+
+    Args:
+        body (UserModel): [description]
+        db (Session): [description]
+
+    Returns:
+        [User]: [description]
+    """    
     avatar = None
     try:
         g = Gravatar(body.email)
@@ -24,11 +34,30 @@ async def create_user(body: UserModel, db: Session) -> User:
 
 
 async def update_token(user: User, token: str | None, db: Session) -> None:
+    """
+    **Update refresh token in the database**
+
+    Args:
+        user (User): [description]
+        token (str): [description]
+        db (Session): [description]
+    """    
     user.refresh_token = token
     db.commit()
 
 
 async def update_avatar(email: str, url: str, db: Session) -> User:
+    """
+    **Update avatar**
+
+    Args:
+        email (str): [description]
+        url (str): [description]
+        db (Session): [description]
+
+    Returns:
+        [User]: [description]
+    """    
     user = await get_user_by_email(email, db)
     user.avatar = url
     db.commit()
@@ -36,6 +65,13 @@ async def update_avatar(email: str, url: str, db: Session) -> User:
 
 
 async def confirmed_email(email: str, db: Session) -> None:
+    """
+    **Check email confirmation flag in the database**
+
+    Args:
+        email (str): [description]
+        db (Session): [description]
+    """    
     user = await get_user_by_email(email, db)
     user.confirmed = True
     if user.id == 1:
@@ -44,18 +80,49 @@ async def confirmed_email(email: str, db: Session) -> None:
 
 
 def change_user_role(user: User, role: str, db: Session) -> User:
+    """
+    **Change the role of the user**
+
+    Args:
+        user (User): [description]
+        role (str): [description]
+        db (Session): [description]
+
+    Returns:
+        [User]: [description]
+    """    
     user.role = role
     db.commit()
     return user
 
 
 def ban_user(user: User, db: Session) -> str:
+    """
+    **Set user ban flag in the database**
+
+    Args:
+        user (User): [description]
+        db (Session): [description]
+
+    Returns:
+        [str]: [description]
+    """    
     user.banned = True
     db.commit()
     return f"{user.username} has been banned"
 
 
 def unban_user(user: User, db: Session) -> str:
+    """
+    **Clear user ban flag in the database**
+
+    Args:
+        user (User): [description]
+        db (Session): [description]
+
+    Returns:
+        str: [description]
+    """    
     user.banned = False
     db.commit()
     return f"{user.username} has been unbanned"

@@ -8,11 +8,22 @@ from app.src.database.models import Photo, Tag
 from app.src.schemas import PhotoModel, TagModel
 
 
-async def create_photo(db: Session, photo_to_create: PhotoModel, user_id: int, tags_list: list[str]):
+async def create_photo(db: Session, photo_to_create: PhotoModel, user_id: int, tags_list: list[str]) -> Photo:
+    """
+    **Create photo endpoint**
 
+    Args:
+        db (Session): [description]
+        photo_to_create (PhotoModel): [description]
+        user_id (int): [description]
+        tags_list (list[str]): [description]
+
+    Returns:
+        [Photo]: [description]
+    """
     new_photo = Photo(**photo_to_create.model_dump())
 
-    valid_tags = process_tags(db, tags_list)
+    valid_tags = _process_tags(db, tags_list)
     for tag in valid_tags:
         new_photo.tags.append(tag)
 
@@ -24,12 +35,31 @@ async def create_photo(db: Session, photo_to_create: PhotoModel, user_id: int, t
 
 
 async def get_photo_by_id(db: Session, photo_id: int):
+    """
+    **Get photo by it's ID**
+
+    Args:
+        db (Session): [description]
+        photo_id (int): [description]
+
+    Returns:
+        [Photo]: [description]
+    """    
     return db.query(Photo).filter(Photo.id == photo_id).first()
 
 
-async def edit_photo_tags(
-    db: Session, photo_id: int, new_tags: str
-):
+async def edit_photo_tags(db: Session, photo_id: int, new_tags: str) -> Photo | None:
+    """
+    **Edit tag of the photo**
+
+    Args:
+        db (Session): [description]
+        photo_id (int): [description]
+        new_tags (str): [description]
+
+    Returns:
+        [Photo] or None: [description]
+    """
     photo = db.query(Photo).filter(Photo.id == photo_id).first()
 
     if not photo:
@@ -37,7 +67,7 @@ async def edit_photo_tags(
 
     tags_list = [tag for tag in new_tags.strip().split(" ") if tag]
 
-    new_tags = process_tags(db, tags_list)
+    new_tags = _process_tags(db, tags_list)
 
     if not new_tags:
         return None
@@ -49,8 +79,17 @@ async def edit_photo_tags(
     return photo
 
 
-def process_tags(db: Session, tags_list: list[str]):
-    
+def _process_tags(db: Session, tags_list: list[str]) -> list:
+    """
+    **Inner function for tags validation**
+
+    Args:
+        db (Session): [description]
+        tags_list (list[str]): [description]
+
+    Returns:
+        [list]: [description]
+    """    
     valid_tags = []
     unique_tags_name = set()
     for tag_name in tags_list:
@@ -73,7 +112,22 @@ def process_tags(db: Session, tags_list: list[str]):
     return valid_tags[:5]
 
 
-async def edit_photo_description(db: Session, photo_id: int, user_id: int, new_description: str):
+async def edit_photo_description(db: Session, photo_id: int, user_id: int, new_description: str) -> Photo:
+    """
+    **Edit description of the photo**
+
+    Args:
+        db (Session): [description]
+        photo_id (int): [description]
+        user_id (int): [description]
+        new_description (str): [description]
+
+    Raises:
+        ValueError: [description]
+
+    Returns:
+        [Photo]: [description]
+    """    
     photo = (
         db.query(Photo).filter(Photo.id == photo_id, Photo.owner_id == user_id).first()
     )
@@ -88,12 +142,23 @@ async def edit_photo_description(db: Session, photo_id: int, user_id: int, new_d
     return photo
 
 
-async def delete_photo(db: Session, photo_id: int, user_id: int):
+async def delete_photo(db: Session, photo_id: int, user_id: int) -> bool:
+    """
+    **Delete photo**
+
+    Args:
+        db (Session): [description]
+        photo_id (int): [description]
+        user_id (int): [description]
+
+    Returns:
+        [bool]: [description]
+    """    
     photo = (
         db.query(Photo).filter(Photo.id == photo_id, Photo.owner_id == user_id).first()
     )
     if not photo:
-        return None
+        return False
     db.delete(photo)
     db.commit()
     return True
@@ -107,7 +172,21 @@ async def find_photos(db: Session,
                       start_date: Optional[date] = None,
                       end_date: Optional[date] = None,
                       ):
+    """
+    **Search photo by given criteria**
 
+    Args:
+        db (Session): [description]
+        key_word (Optional[str], optional): [description]. Defaults to None.
+        sort_by (Optional[str], optional): [description]. Defaults to None.
+        min_rating (Optional[float], optional): [description]. Defaults to None.
+        max_rating (Optional[float], optional): [description]. Defaults to None.
+        start_date (Optional[date], optional): [description]. Defaults to None.
+        end_date (Optional[date], optional): [description]. Defaults to None.
+
+    Returns:
+        [list]: [description]
+    """
     q = key_word.strip() if key_word else ""
     if not q:
         return []
