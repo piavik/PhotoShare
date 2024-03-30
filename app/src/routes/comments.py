@@ -19,19 +19,22 @@ from app.src.services.auth import auth_service, RoleChecker
 router = APIRouter(prefix="/comment", tags=["comments"])
 
 @router.post("/{photo_id}/", response_model=CommentResponse, status_code=status.HTTP_201_CREATED)
-async def create_comment(
+async def update_comment(
         comment_text: str,
         photo_id: int,
         current_user: User = Depends(auth_service.get_current_user),
         db: Session = Depends(get_db)
     ):
-    comment_to_create = CommentModel(
+    '''
+    Create or update comment
+    '''
+    comment_to_update = CommentModel(
         text     = comment_text,
         photo_id = photo_id,
         user_id  = current_user.id
     )
 
-    new_comment = await repository_comments.create_comment(db, comment_to_create)
+    new_comment = await repository_comments.update_comment(db, comment_to_update)
 
     comment_response = CommentResponse(
         comment = CommentDb(
@@ -44,3 +47,20 @@ async def create_comment(
     )
     return comment_response
 
+@router.delete("/{photo_id}/{user_id}", status_code=status.HTTP_200_OK)
+async def delete_comment(
+        photo_id: int,
+        user_id: int,
+        current_user: User = Depends(RoleChecker(allowed_roles=["moder"])),
+        db: Session = Depends(get_db)
+    ):
+    '''
+    Delete comment
+    '''
+
+    result = await delete_comment(db, photo_id, user_id)
+
+    if not result:
+         raise HTTPException(status_code=404, detail="Comment does not exist")
+
+    return { "detail": "Comment deleted" }
