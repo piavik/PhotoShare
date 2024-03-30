@@ -10,7 +10,10 @@ from app.src.services.auth import auth_service, RoleChecker
 from app.src.services.email import send_email
 from app.src.routes.users import red
 
-router = APIRouter(prefix="/auth", tags=["auth"])
+import app.src.services.logging as log
+router = APIRouter(prefix="/auth", tags=["auth"], route_class=log.LoggingRoute) # for debug
+# router = APIRouter(prefix="/auth", tags=["auth"])
+
 security = HTTPBearer()
 
 
@@ -36,7 +39,7 @@ async def login(body: OAuth2PasswordRequestForm = Depends(), db: Session = Depen
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid password")
     access_token = await auth_service.create_access_token(data={"sub": user.email})
     refresh_token = await auth_service.create_refresh_token(data={"sub": user.email})
-    await repository_users.update_token(user, access_token, db)
+    await repository_users.update_token(user, refresh_token, db)
     return {"access_token": access_token, "refresh_token": refresh_token, "token_type": "bearer"}
 
 

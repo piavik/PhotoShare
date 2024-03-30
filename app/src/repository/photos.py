@@ -10,7 +10,7 @@ from app.src.schemas import PhotoModel, TagModel
 
 async def create_photo(db: Session, photo_to_create: PhotoModel, user_id: int, tags_list: list[str]):
 
-    new_photo = Photo(**photo_to_create.dict())
+    new_photo = Photo(**photo_to_create.model_dump())
 
     valid_tags = process_tags(db, tags_list)
     for tag in valid_tags:
@@ -38,7 +38,6 @@ async def edit_photo_tags(
     tags_list = [tag for tag in new_tags.strip().split(" ") if tag]
 
     new_tags = process_tags(db, tags_list)
-    print(new_tags)
 
     if not new_tags:
         return None
@@ -104,7 +103,7 @@ async def find_photos(db: Session,
                       end_date: Optional[date] = None,
                       ):
 
-    q = key_word.strip()
+    q = key_word.strip() if key_word else ""
     if not q:
         return []
 
@@ -114,7 +113,6 @@ async def find_photos(db: Session,
                 Photo.tags.any(Tag.name.ilike(f"%{q}%")),
             )
         )
-
 
     if min_rating is not None:
         photos = photos.filter(Photo.rating >= min_rating)
@@ -130,7 +128,8 @@ async def find_photos(db: Session,
 
     if sort_by == 'rating':
         photos = photos.order_by(Photo.rating.desc())
+        
     elif sort_by == 'date':
         photos = photos.order_by(Photo.created_at.desc())
-        
+
     return photos.all()

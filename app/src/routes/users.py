@@ -63,7 +63,7 @@ async def change_password(body: UserPassword,
                           db: Session = Depends(get_db)):
     if not auth_service.verify_password(body.old_password, current_user.password):
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid password")
-    message = repository_users.update_password(current_user, body.new_password, db)
+    message = auth_service.update_password(current_user, body.new_password, db)
     red.delete(f"user:{current_user.email}")
     return message
 
@@ -87,7 +87,7 @@ async def reset_password(token: str, db: Session = Depends(get_db)):
     user = await repository_users.get_user_by_email(email, db)
     if user is None:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Verification error")
-    repository_users.update_password(user, password, db)
+    auth_service.update_password(user, password, db)
     return {"message": "Password reset"}
 
 

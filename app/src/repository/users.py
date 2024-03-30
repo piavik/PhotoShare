@@ -3,7 +3,6 @@ from sqlalchemy.orm import Session
 
 from app.src.database.models import User
 from app.src.schemas import UserModel
-from app.src.services.auth import auth_service
 
 
 async def get_user_by_email(email: str, db: Session) -> User | None:
@@ -48,13 +47,6 @@ def change_user_role(user: User, role: str, db: Session) -> User:
     user.role = role
     db.commit()
     return user
-
-
-def update_password(user: User, new_password: str, db: Session) -> str:
-    hashed_password = auth_service.get_password_hash(new_password)
-    user.password = hashed_password
-    db.commit()
-    return "Password was changed"
 
 
 def ban_user(user: User, db: Session) -> str:
