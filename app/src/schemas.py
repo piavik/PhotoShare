@@ -94,3 +94,20 @@ class ResponceOptions(str, Enum):
 
 class UrlResponse(BaseModel):
     url: HttpUrl
+
+
+class CommentModel(BaseModel):
+    text: str
+    photo_id: int
+    user_id: int
+
+
+class CommentDb(BaseModel):
+    text: str
+    photo_id: int
+    user_id: int
+    model_config = ConfigDict(from_attributes=True)
+
+class CommentResponse(BaseModel):
+    comment: CommentDb
+    message: str = "Comment updated"
