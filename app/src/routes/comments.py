@@ -58,7 +58,7 @@ async def delete_comment(
     Delete comment
     '''
 
-    result = await delete_comment(db, photo_id, user_id)
+    result = await repository_comments.delete_comment(db, photo_id, user_id)
 
     if not result:
          raise HTTPException(status_code=404, detail="Comment does not exist")
