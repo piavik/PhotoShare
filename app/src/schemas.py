@@ -65,7 +65,7 @@ class PhotoResponse(BaseModel):
 
 
 class TagModel(BaseModel):
-    name: constr(strip_whitespace=True, min_length=1, max_length=40)
+    name: constr(strip_whitespace=True, min_length=1, max_length=40)  # type: ignore
 
 
 class PhotoDetailedResponse(BaseModel):
@@ -94,3 +94,7 @@ class ResponceOptions(str, Enum):
 
 class UrlResponse(BaseModel):
     url: HttpUrl
+
+
+class CommentUpdate(BaseModel):
+    text: str

@@ -4,21 +4,29 @@ from fastapi_limiter.depends import RateLimiter
 import redis.asyncio as redis
 import uvicorn
 
-from app.src.routes import auth, users, photos
+from app.src.routes import auth, users, photos, comment, rating
 from app.src.conf.config import settings
 
 
 app = FastAPI()
 
 app.include_router(auth.router, prefix="/api")
-app.include_router(users.router, prefix='/api')
+app.include_router(users.router, prefix="/api")
 app.include_router(photos.router, prefix="/api")
+app.include_router(
+    comment.router, prefix="/api"
+)  # Включение маршрутов для комментариев
 
 
 @app.on_event("startup")
 async def startup() -> None:
-    r = await redis.Redis(host=settings.redis_host, port=settings.redis_port,
-                          db=0, encoding="utf-8", decode_responses=True)
+    r = await redis.Redis(
+        host=settings.redis_host,
+        port=settings.redis_port,
+        db=0,
+        encoding="utf-8",
+        decode_responses=True,
+    )
     await FastAPILimiter.init(r)
 
 
