@@ -1,5 +1,7 @@
 import cloudinary.uploader
 from typing import Optional
+
+from fastapi import HTTPException, status
 from app.src.conf.config import settings
 
 cloudinary.config(
@@ -11,7 +13,14 @@ cloudinary.config(
 
 
 async def upload_photo(file):
-    return cloudinary.uploader.upload(file)
+    try:
+        upload_result = cloudinary.uploader.upload(
+            file, 
+            allowed_formats=["jpg", "jpeg", "png", "webp", "bmp", "gif", "svg", "tif", "tiff"]
+        )
+    except cloudinary.exceptions.Error as e:
+        print(f"Error uploading to Cloudinary: {e}")
+        raise HTTPException(status_code=400, detail="Error uploading image.")
 
 
 async def delete_photo(cloudinary_url: str):
