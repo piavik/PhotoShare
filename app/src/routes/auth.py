@@ -11,8 +11,8 @@ from app.src.services.email import send_email
 from app.src.routes.users import red
 
 import app.src.services.logging as log
-router = APIRouter(prefix="/auth", tags=["auth"], route_class=log.LoggingRoute) # for debug
-# router = APIRouter(prefix="/auth", tags=["auth"])
+# router = APIRouter(prefix="/auth", tags=["auth"], route_class=log.LoggingRoute) # for debug
+router = APIRouter(prefix="/auth", tags=["auth"])
 
 security = HTTPBearer()
 
@@ -116,7 +116,7 @@ async def confirmed_email(token: str, db: Session = Depends(get_db)):
     - HTTPException: 400 Verification error
 
     Returns:
-    - [dict]: {"message": "message text"}
+    - message: message
     """    
     email = await auth_service.get_email_from_token(token)
     user = await repository_users.get_user_by_email(email, db)
@@ -141,7 +141,7 @@ async def request_email(body: RequestEmail, background_tasks: BackgroundTasks, r
     - db (Session, optional): database session. Defaults to Depends(get_db).
 
     Returns:
-    - [dict]: {"message": "message text"}
+    - message: message
     """    
     user = await repository_users.get_user_by_email(body.email, db)
 
@@ -163,7 +163,7 @@ async def logout(token: str = Depends(auth_service.oauth2_scheme),
     - _ (User, optional): User object. Defaults to Depends(RoleChecker(allowed_roles=["user"])).
 
     Returns:
-    - [dict]: {"message": "message text"} 
+    - message: message
     """                 
     red.set(token, 1)
     red.expire(token, 900)
