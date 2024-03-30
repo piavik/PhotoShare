@@ -158,7 +158,7 @@ async def update_photo_tags(
             detail="No valid tags provided, existing tags remain unchanged",
         )
 
-    updated_photo = await repository_photos.edit_photo_tags(db, photo_id, current_user.id, tags)
+    updated_photo = await repository_photos.edit_photo_tags(db, photo_id, tags)
 
     if not updated_photo:
         raise HTTPException(status_code=404, detail="Failed to update tags")

@@ -28,9 +28,9 @@ async def get_photo_by_id(db: Session, photo_id: int):
 
 
 async def edit_photo_tags(
-    db: Session, photo_id: int, user_id: int, new_tags: str
+    db: Session, photo_id: int, new_tags: str
 ):
-    photo = db.query(Photo).filter(Photo.id == photo_id, Photo.owner_id == user_id).first()
+    photo = db.query(Photo).filter(Photo.id == photo_id).first()
 
     if not photo:
         return None
