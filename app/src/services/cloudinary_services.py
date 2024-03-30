@@ -13,6 +13,15 @@ cloudinary.config(
 
 
 async def upload_photo(file):
+    """
+    **Upload photo to cloudinary service**
+
+    Args:
+        file ([type]): [description]
+
+    Raises:
+        HTTPException: [description]
+    """    
     try:
         upload_result = cloudinary.uploader.upload(
             file, 

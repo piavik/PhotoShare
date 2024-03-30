@@ -12,7 +12,14 @@ def log_info(req_body, res_body):
 
 
 class LoggingRoute(APIRoute):
+    """
+    **APIRoute class replacement to enable verbose logging**
+
+    Args:
+        APIRoute ([type]): [description]
+    """    
     def get_route_handler(self) -> Callable:
+        
         original_route_handler = super().get_route_handler()
 
         async def custom_route_handler(request: Request) -> Response:

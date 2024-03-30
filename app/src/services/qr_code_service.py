@@ -2,7 +2,16 @@ import qrcode
 from io import BytesIO
 
 
-def generate_qr_code(url: str):
+def generate_qr_code(url: str) -> BytesIO:
+    """
+    **Generate QR code from the URL**
+
+    Args:
+        url (str): [description]
+
+    Returns:
+        [BytesIO]: [description]
+    """    
     qr = qrcode.QRCode(
         version=1,
         error_correction=qrcode.constants.ERROR_CORRECT_L,
