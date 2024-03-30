@@ -17,6 +17,7 @@ class LoggingRoute(APIRoute):
 
         async def custom_route_handler(request: Request) -> Response:
             req_body = await request.body()
+            logging.info(f"{request.headers=}")
             response = await original_route_handler(request)
             tasks = response.background
             

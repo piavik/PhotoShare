@@ -7,8 +7,13 @@ from unittest.mock import AsyncMock, MagicMock
 
 from main import app
 from app.src.database.db import get_db
-from app.src.database.models import Base, User
+from app.src.database.models import Base, User, Photo
 # from src.models.schemas import UserModel
+from app.src.services.auth import auth_service
+from random import randint
+
+# from tests.make_fake_db import make_fake_users, make_fake_photos
+import tests.make_fake_db as fake_db
 
 
 SQLALCHEMY_DATABASE_URL = "sqlite:///./tests/db.sqlite3"
@@ -19,15 +24,30 @@ engine = create_engine(SQLALCHEMY_DATABASE_URL,
 
 TestingSessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 
+FAKE_PARAMS = {
+    "user": 5,
+    "admin": 5,
+    "moder": 5,
+    "total users": 15, # users + admin + moders
+    "photos": 20
+}
+
+
+@pytest.fixture(scope="function", autouse=True)
+def patch_fastapi_limiter(monkeypatch):
+    monkeypatch.setattr("fastapi_limiter.FastAPILimiter.redis", AsyncMock())
+    monkeypatch.setattr("fastapi_limiter.FastAPILimiter.identifier", AsyncMock())
+    monkeypatch.setattr("fastapi_limiter.FastAPILimiter.http_callback", AsyncMock()) 
+
 
 @pytest.fixture(scope="module")
 def session():
     # Create the database for tests
-
     Base.metadata.drop_all(bind=engine)
     Base.metadata.create_all(bind=engine)
-
     db = TestingSessionLocal()
+    fake_db.make_fake_users(FAKE_PARAMS["user"], FAKE_PARAMS["moder"], FAKE_PARAMS["admin"])
+    fake_db.make_fake_photos(FAKE_PARAMS["photos"], FAKE_PARAMS["total users"])
     try:
         yield db
     finally:
@@ -56,63 +76,70 @@ def user():
             "password": "123456789"}
 
 @pytest.fixture(scope="session")
-def user2():
+def userN():
     return {"username": "biakabuka", 
             "email": "buka02@example.com", 
             "password": "123456789"}
 
-@pytest.fixture(scope="function", autouse=True)
-def patch_fastapi_limiter(monkeypatch):
-    monkeypatch.setattr("fastapi_limiter.FastAPILimiter.redis", AsyncMock())
-    monkeypatch.setattr("fastapi_limiter.FastAPILimiter.identifier", AsyncMock())
-    monkeypatch.setattr("fastapi_limiter.FastAPILimiter.http_callback", AsyncMock()) 
+
+def _get_random_user(session, role = "user") -> User:
+    random_username = f'{role}_{randint(0, FAKE_PARAMS[role])}'
+    return session.query(User).filter(User.username == random_username).first()
 
 @pytest.fixture(scope="function")
-def token(client, user, session, monkeypatch):
-    mock_send_email = MagicMock()
-    mock_avatar = MagicMock()
-    monkeypatch.setattr("app.src.routes.auth.send_email", mock_send_email)
-    monkeypatch.setattr("libgravatar.Gravatar", mock_avatar)        # doe not seem to work
-    client.post("/api/auth/signup", json=user)
-    current_user: User = session.query(User).filter(User.email == user.get('email')).first()
-    current_user.confirmed = True
-    session.commit()
+def photo(session) -> Photo:
+    ''' get random photo '''
+    random_photo = None
+    while not random_photo:
+        random_photo_id = randint(0, FAKE_PARAMS["photos"])
+        return session.query(Photo).filter(Photo.id == random_photo_id).first()
+
+
+@pytest.fixture(scope="function")
+def token(client, session):
+    random_user = None
+    while not random_user:
+        random_user = _get_random_user(session)
     response = client.post(
         "/api/auth/login",
-        data={"username": user.get('email'), "password": user.get('password')},
+        data={"username": random_user.email, "password": f"{random_user.username}_{random_user.email}"},
     )
     token = response.json()
     return token
 
-@pytest.fixture(scope="function")
-def token02(client, user2, session, monkeypatch):
-    mock_send_email = MagicMock()
-    mock_avatar = MagicMock()
-    monkeypatch.setattr("app.src.routes.auth.send_email", mock_send_email)
-    monkeypatch.setattr("libgravatar.Gravatar", mock_avatar)        # doe not seem to work
-    client.post("/api/auth/signup", json=user)
-    current_user: User = session.query(User).filter(User.email == user2.get('email')).first()
-    current_user.confirmed = True
-    session.commit()
-    response = client.post(
-        "/api/auth/login",
-        data={"username": user2.get('email'), "password": user2.get('password')},
-    )
-    token = response.json()
-    return token
+# def _login_as_admin(client, user2, session):
+#     _create_new_user(user, session, "admin")
+#     response = client.post(
+#         "/api/auth/login",
+#         data={"username": user2.get('email'), "password": user2.get('password')},
+#     )
+#     token = response.json()
+#     return token
 
-@pytest.fixture(scope="function")
-def admin_token(monkeypatch):
-    return "somestring"
 
-@pytest.fixture(scope="function")
-def moder_token(monkeypatch):
-    return "somestring"
+# @pytest.fixture(scope="function")
+# def token(client, user, session):
+#     token = _login_as_user(client, user, session)
+#     return token
 
-@pytest.fixture(scope="function")
-def photo(monkeypatch):
-    return {"id": 1,
-        "file": "somestring",
-        "description": "some description",
-        "tags": ["first", "second", "third", "fourth", "fifths" ]
-    }
+
+# @pytest.fixture(scope="function")
+# def token2(client, user2, session):
+#     token = _login_as_user(client, user2, session)
+#     return token
+
+# @pytest.fixture(scope="function")
+# def admin_token(monkeypatch):
+#     return "somestring"
+
+# @pytest.fixture(scope="function")
+# def moder_token(monkeypatch):
+#     return "somestring"
+
+# @pytest.fixture(scope="function")
+# def photo(monkeypatch):
+#     return {"id": 1,
+#         "file": "somestring",
+#         "description": "some description",
+#         "tags": ["first", "second", "third", "fourth", "fifths" ]
+#     }

@@ -5,14 +5,6 @@ from unittest.mock import MagicMock #, patch
 from app.src.database.models import User
 from app.src.services.auth import auth_service
 
-# @pytest.fixture()
-# def token(client, user):
-#     response = client.post(
-#         "/api/auth/login",
-#         data={"username": user.get('email'), "password": user.get('password')},
-#     )
-#     token = response.json()
-#     return token
 
 #---- signup ----
 def test_signup_ok(client, user, monkeypatch):
@@ -89,12 +81,13 @@ def test_login_fail_user_not_confirmed(client, session, user):
     assert data['detail'] == "Email not confirmed"
 
 #---- refresh token ----
-# requred user to be authenticated
-def test_refresh_token_ok(client, token02):
+# requred user to be authenticated (via token)
+def test_refresh_token_ok(client, token):
     # authenticate via token
+    refresh_token = token.get("refresh_token")
     response = client.get(
-        "/api/auth/refresh",
-        headers={'Authorization': f'Bearer {token02.get("refresh_token")}'}
+        "/api/auth/refresh_token",
+        headers={"Authorization": f"Bearer {refresh_token}"}
     )
     assert response.status_code == 200
     data = response.json()
@@ -102,38 +95,32 @@ def test_refresh_token_ok(client, token02):
     assert isinstance(data['refresh_token'], str)
     assert data['token_type'] == "bearer"
 
-# def test_refresh_token_fail_user_not_found(client, session, user, monkeypatch):
+# stupid test - this is not possible situation as user is authenticated via jwt
+# def test_refresh_token_fail_other_user_token(client, token):
+#     refresh_token1 = token.get("refresh_token")
+#     refresh_token2 = token.get("refresh_token")
 #     response = client.get(
-#         "/api/auth/refresh"
-#     )
-#     assert response.status_code == 404
-
-
-# def test_refresh_token_fail_wrong_token_scope(client, session, user, monkeypatch):
-#     response = client.get(
-#         "/api/auth/refresh"
+#         "/api/auth/refresh_token",
+#         headers={"Authorization": f"Bearer {refresh_token1}"}
 #     )
 #     assert response.status_code == 401
 
-# def test_refresh_token_fail_wrong_token_expired(client, session, user, monkeypatch):
-#     response = client.get(
-#         "/api/auth/refresh"
-#     )
-#     assert response.status_code == 401
+def test_refresh_token_fail_wrong_token_scope(client, token):
+    acess_token = token.get("acess_token")
+    response = client.get(
+        "/api/auth/refresh_token",
+        headers={"Authorization": f"Bearer {acess_token}"}
+    )
+    assert response.status_code == 401
 
-
-
-#---- confirm email ----
-# @pytest.fixture
-# def mock_get_user_by_email():
-#     with patch("get_user_by_email") as mock:
-#         yield mock
-
-# @pytest.fixture
-# def mock_get_email_from_token():
-#     # with patch("auth_service.get_email_from_token") as mock:
-#     with patch("get_email_from_token") as mock:     # testing
-#         yield mock
+def test_refresh_token_fail_wrong_token_expired(client, session, user):
+    token_data = {"sub": user.get("email"), "iat": 1710719280, "exp": 1710721280, "scope": "email_token"}
+    token = jwt.encode(token_data, auth_service.SECRET_KEY, algorithm=auth_service.ALGORITHM)
+    response = client.get(
+        "/api/auth/refresh_token",
+        headers={"Authorization": f"Bearer {token}"}
+    )
+    assert response.status_code == 401
 
 def test_confirm_email_ok(client, user):
     token_data = {"sub": user.get("email"), "iat": 1710719280, "exp": 2710719280, "scope": "email_token"}
@@ -167,6 +154,7 @@ def test_confirm_email_fail_user_not_found(client):
     data = response.json()
     assert data['detail'] == "Verification error"
 
+# @pytest.mark.skip
 def test_confirm_email_fail_wrong_token_scope(client, user):
     token_data = {"sub": user.get("email"), "iat": 1710719280, "exp": 2710719280, "scope": "refresh_token"}
     token = jwt.encode(token_data, auth_service.SECRET_KEY, algorithm=auth_service.ALGORITHM)

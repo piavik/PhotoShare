@@ -1,23 +1,36 @@
 import pytest
 
-# create photo
-def test_create_photo_ok(client, token, photo):
+from unittest.mock import MagicMock, AsyncMock, patch
+from fastapi import UploadFile
+
+from app.src.schemas import PhotoModel
+
+# from app.src.services import cloudinary_services
+
+# @patch("app.src.service.cloudinary_services.upload_photo", )
+def test_create_photo_ok(client, token, photo, monkeypatch):
     # authenticate
     # mock cloudinary request
+    mock_cloudinary = MagicMock()
+    monkeypatch.setattr("app.src.services.cloudinary_services.upload_photo", mock_cloudinary)
+    access_token = token["access_token"] 
     response = client.post(
-        f"/api/photo/{photo['id']}",
-        json=photo,
-        headers={'Authorization': f'Bearer {token}'}
+        f"/api/photos/upload",
+        data={"file": MagicMock(spec=PhotoModel), "description": photo.description, "tags": []},
+        headers={'Authorization': f'Bearer {access_token}'}
     )
     data = response.json()
+    print(data)
     assert data["detail"] == "Photo successfully uploaded"
     # db entry exists
 
+# @patch("app.src.service.cloudinary_services.upload_photo")
 def test_create_photo_failure_cloudinary(client, token, photo):
     # authenticate
     # mock cloudinary request
+    cloudinary_services.upload_photo.return_value.error = { message: "Failed to upload photo"}
     response = client.post(
-        f"/api/photo/{photo['id']}",
+        f"/api/photos/upload",
         json=photo,
         headers={'Authorization': f'Bearer {token}'}
     )
@@ -27,7 +40,7 @@ def test_create_photo_failure_cloudinary(client, token, photo):
 def test_delete_photo_ok_user(client, token, photo):
     # authenticate as owner user
     response = client.delete(
-        f"/api/photo/{photo['id']}",
+        f"/api/photo/upload",
         headers={'Authorization': f'Bearer {token}'}
     )
     data = response.json()
