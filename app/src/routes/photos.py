@@ -34,6 +34,21 @@ async def create_photo(
     current_user: User = Depends(auth_service.get_current_user),
     db: Session = Depends(get_db),
 ):
+    """create_photo
+    Uploads photo into cloudinaty and create a new record in database.
+    Args:
+        file (UploadFile, optional): photo to be uploaded..
+        description (str, optional): description to the photo.
+        tags (str, optional): tags to be added to the photo.
+        current_user (User, optional): current session user. Defaults to Depends(auth_service.get_current_user).
+        db (Session, optional): database to add information into. Defaults to Depends(get_db).
+
+    Raises:
+        HTTPException: if photo upload failed
+        HTTPException: if failed to recieve cloudinary secure URL
+    Returns:
+        ResponceModel: PhotoResponse
+    """
     tags_list = tags.strip().split(" ")
     file.file.seek(0)
     upload_result = await cloudinary_services.upload_photo(file.file) 
@@ -81,6 +96,20 @@ async def delete_photo(
     current_user: User = Depends(auth_service.get_current_user),
     db: Session = Depends(get_db),
 ):
+    """delete
+    Deletes photo by provided id
+    Args:
+        photo_id (int): id of the photo to be deleted
+        current_user (User, optional): current session user. Defaults to Depends(auth_service.get_current_user).
+        db (Session, optional): databese. Defaults to Depends(get_db).
+
+    Raises:
+        HTTPException: if photo was not found by id
+        HTTPException: if current user has not enought rights to delete photo
+
+    Returns:
+        [type]: [description]
+    """
     photo = db.query(Photo).filter(Photo.id == photo_id).first()
 
     if not photo:
@@ -93,7 +122,7 @@ async def delete_photo(
             )
 
     await cloudinary_services.delete_photo(photo.photo_url)
-    await repository_photos.delete_photo(db, photo_id, photo.owner_id)
+    await repository_photos.delete_photo(db, photo_id)
 
     return {"detail": "Photo succesfuly deleted"}
 
@@ -108,6 +137,26 @@ async def get_photos_by_key_word(
     start_date: date = Query(None, description="Start date for filtering (YYYY-MM-DD)"),
     end_date: date = Query(None, description="End date for filtering (YYYY-MM-DD)"),
 ):
+    """find_photos
+    Searches all photos in the database that match specified filters. Photos filtered by
+    a keyword in their description or tags, a rating range, and/or a creation date range.
+    Results can be sorted by rating or creation date in descending order.
+    Args:
+        db (Session, optional): database. Defaults to Depends(get_db).
+        key_word (str, optional): the key word by which photo(s) to be found. Defaults to Query(None, description="Print key word").
+        sort_by (SortOptions, optional): options to sort the search result. Defaults to Query(None, description="Sort by 'raiting' or 'date'").
+        min_raiting (float, optional): option to filter serch result by minimum rating. Defaults to Query(None, description="Minimum rating filter").
+        max_rating (float, optional): option to filter serch result by maximum rating. Defaults to Query(None, description="Maximum rating filter").
+        start_date (date, optional): option to filter serch result by minimum creation date. Defaults to Query(None, description="Start date for filtering (YYYY-MM-DD)").
+        end_date (date, optional): option to filter serch result by maximum creation date. Defaults to Query(None, description="End date for filtering (YYYY-MM-DD)").
+
+    Raises:
+        HTTPException: if no key words or space was provided as key word
+        HTTPException: if no photos were found by provided key words and filters applied
+
+    Returns:
+        List[PhotoDetailedResponse]: list of database records meating applied filters
+    """
     if not key_word:
         raise HTTPException(status_code=404, detail="No key word provided")
 
@@ -124,6 +173,19 @@ async def read_photo(
     db: Session = Depends(get_db),
     response_type: ResponceOptions = Query(default=ResponceOptions.detailed, description="Select a response option")
 ):
+    """read_photo
+    Retrieves photo information by ID with various response formats based on user selection.
+    Args:
+        photo_id (int): photo id to return
+        db (Session, optional): database. Defaults to Depends(get_db).
+        response_type (ResponceOptions, optional): options of response model to return. Defaults to Query(default=ResponceOptions.detailed, description="Select a response option").
+
+    Raises:
+        HTTPException: photo was not found by id
+
+    Returns:
+        ResponceModel: based on user's choice in "response_type", Defaults to PhotoDetailedResponse
+    """
     photo = await repository_photos.get_photo_by_id(db, photo_id)
     if not photo:
         raise HTTPException(status_code=404, detail="Photo not found")
@@ -142,6 +204,23 @@ async def update_photo_tags(
     current_user: User = Depends(auth_service.get_current_user),
     db: Session = Depends(get_db),
 ):
+    """update_photo_tags
+    Updates tags of the photo found by provided id, if valid new tags provided
+    Args:
+        photo_id (int): id of the photo which tags to be edited
+        tags (str, optional): new tags as string space separated. Defaults to Form("", description="Print your tags separated with space").
+        current_user (User, optional): current session user. Defaults to Depends(auth_service.get_current_user).
+        db (Session, optional): database. Defaults to Depends(get_db).
+
+    Raises:
+        HTTPException: photo not found by id
+        HTTPException: current user has not enought rights to edit this photo
+        HTTPException: tags provided are not valid
+        HTTPException: faild to update photo
+
+    Returns:
+        ResponseModel: PhotoDetailedResponse
+    """
     photo = await repository_photos.get_photo_by_id(db, photo_id)
     if not photo:
         raise HTTPException(status_code=404, detail="Photo not found")
@@ -173,6 +252,22 @@ async def update_description(
     current_user: User = Depends(RoleChecker(allowed_roles=["user"])),
     db: Session = Depends(get_db),
     ):
+    """update_description
+    Updates description of the photo found by provided id, if valid new tags provided
+    Args:
+        photo_id (int): id of the photo description of ehich to be edited
+        description (str, optional): new description to photo. Defaults to Form(...).
+        current_user (User, optional): current session user. Defaults to Depends(RoleChecker(allowed_roles=["user"])).
+        db (Session, optional): database. Defaults to Depends(get_db).
+
+    Raises:
+        HTTPException: photo was not found by id
+        HTTPException: current user has not enouught right to edit this photo
+        HTTPException: user tried to delete description wo providing new
+
+    Returns:
+        [type]: [description]
+    """
     photo = await repository_photos.get_photo_by_id(db, photo_id)
     if not photo:
         raise HTTPException(status_code=404, detail="Photo not found")
@@ -219,6 +314,28 @@ async def transform_photo(
     current_user: User = Depends(RoleChecker(["user"])),
     db: Session = Depends(get_db),
 ):
+    """transform_photo
+    Transforms photo using cloudinary transformation services, returning qr with transformed photo url
+    Args:
+        photo_id (int): id of the photo to be transformed
+        width (Optional[int], optional): new width. Defaults to Form(None).
+        height (Optional[int], optional): new height. Defaults to Form(None).
+        crop (Optional[str], optional): cropping options. Defaults to Form( None, description="Type of crop (scale, fill, fit, etc.)" ).
+        angle (Optional[int], optional): new angle. Defaults to Form(None).
+        filter (Optional[str], optional): filter to be applied. Defaults to Form( None, description="Apply a filter (sepia, grayscale, etc.)" ).
+        gravity (Optional[str], optional): gravity to be applied. Defaults to Form( None, description="Gravity for cropping (north, south, east, west, face, etc.)" ).
+        current_user (User, optional): current session user. Defaults to Depends(RoleChecker(["user"])).
+        db (Session, optional): database. Defaults to Depends(get_db).
+
+    Raises:
+        HTTPException: photo was not found by id
+        HTTPException: current user has not enought rights to transform this photo
+        HTTPException: non of transformation options was provided
+        HTTPException: new cloudunary url was not created
+
+    Returns:
+        StreamingResponse: QR png
+    """
     photo = await repository_photos.get_photo_by_id(db, photo_id)
     if not photo:
         raise HTTPException(status_code=404, detail="Photo not found")
