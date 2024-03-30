@@ -52,7 +52,10 @@ async def edit_photo_tags(
 def process_tags(db: Session, tags_list: list[str]):
     
     valid_tags = []
+    unique_tags_name = set()
     for tag_name in tags_list:
+        if tag_name in unique_tags_name:
+            continue
         try:
             tag_data = TagModel(name=tag_name)
             tag = db.query(Tag).filter(Tag.name == tag_data.name).first()
@@ -60,7 +63,9 @@ def process_tags(db: Session, tags_list: list[str]):
                 tag = Tag(name=tag_data.name)
                 db.add(tag)
                 db.commit()
+            unique_tags_name.add(tag_name)
             valid_tags.append(tag)
+
         except ValidationError as e:
             print(f"Tag validation error for '{tag_name}':", e.errors())
             continue
