@@ -1,25 +1,34 @@
 import pytest
 
 from unittest.mock import patch
+from jose import jwt
 
 from app.src.database.models import User
 from app.src.services.auth import RoleChecker
+from app.src.conf.config import settings
+
+SECRET_KEY = settings.jwt_secret_key
+ALGORITHM = settings.jwt_algorithm
 
 #---- me ----
-def test_read_users_me_ok(client, session, user, monkeypatch):
-    current_user = user
-    # current_user: User = (
-    #     session.query(User).filter(User.email == user.get("email")).first()
-    # )
-    # mock_user = MagicMock()
-    monkeypatch.setattr("app.src.services.auth.RoleChecker", current_user)
+def test_read_users_me_unauthenticated(client):
     response = client.get(
-        "/api/user/me"
+        "/api/users/me"
     )
-    assert response.status_code == 200, response.text
+    assert response.status_code == 401
+
+def test_read_users_me_ok(client, token):
+    access_token = token["access_token"]
+    payload = jwt.decode(access_token, SECRET_KEY, algorithms=[ALGORITHM])
+    email = payload["sub"]
+    response = client.get(
+        "/api/users/me",
+        headers={'Authorization': f'Bearer {access_token}'}
+    )
+    assert response.status_code == 200
     data = response.json()
-    assert data["user"]["username"] == user.get("username")
-    assert data["user"]["email"] == user.get("email")
+    # assert data["username"] == user.get("username")
+    assert data["email"] == email
 
 
 # def test_avatar(client, session, user, monkeypatch):

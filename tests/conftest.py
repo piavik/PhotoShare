@@ -29,7 +29,7 @@ FAKE_PARAMS = {
     "admin": 5,
     "moder": 5,
     "total users": 15, # users + admin + moders
-    "photos": 20
+    "photos": 100
 }
 
 
@@ -92,8 +92,8 @@ def photo(session) -> Photo:
     random_photo = None
     while not random_photo:
         random_photo_id = randint(0, FAKE_PARAMS["photos"])
-        return session.query(Photo).filter(Photo.id == random_photo_id).first()
-
+        random_photo = session.query(Photo).filter(Photo.id == random_photo_id).first()
+    return random_photo
 
 @pytest.fixture(scope="function")
 def token(client, session):
@@ -107,39 +107,26 @@ def token(client, session):
     token = response.json()
     return token
 
-# def _login_as_admin(client, user2, session):
-#     _create_new_user(user, session, "admin")
-#     response = client.post(
-#         "/api/auth/login",
-#         data={"username": user2.get('email'), "password": user2.get('password')},
-#     )
-#     token = response.json()
-#     return token
+@pytest.fixture(scope="function")
+def admin_token(client, session):
+    random_user = None
+    while not random_user:
+        random_user = _get_random_user(session, role = "admin")
+    response = client.post(
+        "/api/auth/login",
+        data={"username": random_user.email, "password": f"{random_user.username}_{random_user.email}"},
+    )
+    token = response.json()
+    return token
 
-
-# @pytest.fixture(scope="function")
-# def token(client, user, session):
-#     token = _login_as_user(client, user, session)
-#     return token
-
-
-# @pytest.fixture(scope="function")
-# def token2(client, user2, session):
-#     token = _login_as_user(client, user2, session)
-#     return token
-
-# @pytest.fixture(scope="function")
-# def admin_token(monkeypatch):
-#     return "somestring"
-
-# @pytest.fixture(scope="function")
-# def moder_token(monkeypatch):
-#     return "somestring"
-
-# @pytest.fixture(scope="function")
-# def photo(monkeypatch):
-#     return {"id": 1,
-#         "file": "somestring",
-#         "description": "some description",
-#         "tags": ["first", "second", "third", "fourth", "fifths" ]
-#     }
+@pytest.fixture(scope="function")
+def moder_token(client, session):
+    random_user = None
+    while not random_user:
+        random_user = _get_random_user(session, role = "moder")
+    response = client.post(
+        "/api/auth/login",
+        data={"username": random_user.email, "password": f"{random_user.username}_{random_user.email}"},
+    )
+    token = response.json()
+    return token
