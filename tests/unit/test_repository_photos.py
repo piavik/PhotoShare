@@ -159,7 +159,7 @@ class TestPhotosUser(unittest.IsolatedAsyncioTestCase):
 
         processed_tags = process_tags(self.session, tags_list) #чому повертає список len()==5? 
 
-        # self.assertEqual(len(processed_tags), 1)  #очікується, що буде додано тільки перший тег, а решта існують в БД
+        self.assertEqual(len(processed_tags), 1)  #очікується, що буде додано тільки перший тег, а решта існують в БД
         self.assertEqual(processed_tags[0].name, "new")
         self.session.commit.assert_called()
 
@@ -212,11 +212,17 @@ class TestPhotosUser(unittest.IsolatedAsyncioTestCase):
 
         mock_tag = MagicMock(spec=Tag, name="one")
 
-        self.session.query.return_value.filter.return_value.first.side_effect = [None, mock_tag, mock_tag, mock_tag, mock_tag]
+        self.session.query.filter.first.return_value = [
+            None,
+            mock_tag,
+            mock_tag,
+            mock_tag,
+            mock_tag,
+        ]
 
         processed_tags = process_tags(self.session, tags_list) #чому повертає список len()==5? 
 
-        # self.assertEqual(len(processed_tags), 1)  #очікується, що буде додано тільки перший тег, а решта - не унікальні
+        self.assertEqual(len(processed_tags), 1)  #очікується, що буде додано тільки перший тег, а решта - не унікальні
         self.assertEqual(processed_tags[0].name, "one")
         self.session.commit.assert_called()
 
@@ -263,6 +269,7 @@ class TestFindPhotos(unittest.IsolatedAsyncioTestCase):
         self.db = MagicMock(spec=Session)
         self.mock_query = self.db.query.return_value
         self.mock_filter = self.mock_query.filter.return_value
+        self.mock_3_filter = self.mock_query.filter.filter.filter.return_value
         self.mock_order_by = self.mock_filter.order_by.return_value
 
         self.photo_1 = Photo(
@@ -286,19 +293,19 @@ class TestFindPhotos(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(result, [])
 
     async def test_find_photos_with_date_range(self):
-        self.mock_filter.all.return_value = [self.photo_1]
+        self.mock_query.filter().filter().filter().all.return_value = [self.photo_1]
         result = await find_photos(
             self.db, key_word="Test", start_date=date(2024, 3, 28), end_date=date(2024, 3, 31)
         )
-        #self.assertEqual(len(result), 1) #очікується len()==1, AssertionError: 0 != 1
-        #self.assertIn(self.photo_1, result)
+        self.assertEqual(len(result), 1) 
+        self.assertIn(self.photo_1, result)
 
     async def test_find_photos_with_rating(self):
-        self.mock_filter.all.return_value = self.photos
+        self.mock_query.filter().filter().filter().all.return_value = self.photos
         result = await find_photos(self.db,key_word="Test", min_rating=3.9, max_rating=4.6)
-        # self.assertEqual(len(result), 2) #очікується len()==2, AssertionError: 0 != 2
-        # self.assertEqual(self.photo_1.id, result[0].id)
-        # self.assertEqual(self.photo_2.id, result[1].id)
+        self.assertEqual(len(result), 2) 
+        self.assertEqual(self.photo_1.id, result[0].id)
+        self.assertEqual(self.photo_2.id, result[1].id)
 
     async def test_find_photos_sort_by_date(self):
         self.mock_order_by.all.return_value = [self.photo_1, self.photo_2]
