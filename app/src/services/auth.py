@@ -13,6 +13,7 @@ from app.src.database.db import get_db
 from app.src.repository import users as repository_users
 from app.src.conf.config import settings
 from app.src.schemas import UserDb
+from app.src.database.models import User
 
 
 class Auth:
@@ -91,7 +92,7 @@ class Auth:
             user = pickle.loads(user)
         return user
 
-    def create_email_token(self, data: dict, expires_delta: Optional[float] = None) -> str:
+    async def create_email_token(self, data: dict, expires_delta: Optional[float] = None) -> str:
         to_encode = data.copy()
         if expires_delta:
             expire = datetime.utcnow() + timedelta(minutes=expires_delta)
@@ -123,6 +124,12 @@ class Auth:
 
     def get_user_token(self, token: str = Depends(oauth2_scheme)):
         return token
+
+    def update_password(self, user: User, new_password: str, db: Session) -> str:
+        hashed_password = self.get_password_hash(new_password)
+        user.password = hashed_password
+        db.commit()
+        return "Password was changed"
 
 
 auth_service = Auth()
