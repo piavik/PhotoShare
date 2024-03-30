@@ -103,7 +103,7 @@ async def find_photos(db: Session,
                       end_date: Optional[date] = None,
                       ):
 
-    q = key_word.strip()
+    q = key_word.strip() if key_word else ""
     if not q:
         return []
 
@@ -113,7 +113,6 @@ async def find_photos(db: Session,
                 Photo.tags.any(Tag.name.ilike(f"%{q}%")),
             )
         )
-
 
     if min_rating is not None:
         photos = photos.filter(Photo.rating >= min_rating)
@@ -129,7 +128,8 @@ async def find_photos(db: Session,
 
     if sort_by == 'rating':
         photos = photos.order_by(Photo.rating.desc())
+        
     elif sort_by == 'date':
         photos = photos.order_by(Photo.created_at.desc())
-        
+
     return photos.all()
