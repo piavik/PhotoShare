@@ -10,7 +10,7 @@ from app.src.schemas import PhotoModel, TagModel
 
 async def create_photo(db: Session, photo_to_create: PhotoModel, user_id: int, tags_list: list[str]):
 
-    new_photo = Photo(**photo_to_create.dict())
+    new_photo = Photo(**photo_to_create.model_dump())
 
     valid_tags = process_tags(db, tags_list)
     for tag in valid_tags:
@@ -38,7 +38,6 @@ async def edit_photo_tags(
     tags_list = [tag for tag in new_tags.strip().split(" ") if tag]
 
     new_tags = process_tags(db, tags_list)
-    print(new_tags)
 
     if not new_tags:
         return None

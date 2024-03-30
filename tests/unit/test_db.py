@@ -2,6 +2,13 @@ import unittest
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 
+import sys
+import os
+from dotenv import load_dotenv
+
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "..")))
+load_dotenv()
+
 from app.src.database.db import get_db
 
 SQLALCHEMY_DATABASE_URL = "sqlite:///./tests/test.db"
