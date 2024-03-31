@@ -34,6 +34,7 @@ async def create_photo(
     ):
     """
     **Create photo endpoint**
+    Uploads photo into cloudinaty and create a new record in database.
 
     Args:
     - file (UploadFile, optional): File to upload
@@ -123,7 +124,7 @@ async def delete_photo(
             )
 
     await cloudinary_services.delete_photo(photo.photo_url)
-    await repository_photos.delete_photo(db, photo_id, photo.owner_id)
+    await repository_photos.delete_photo(db, photo_id)
 
     return {"detail": "Photo succesfuly deleted"}
 
@@ -175,6 +176,7 @@ async def read_photo(
     ):
     """
     **Endpoint for getting photo by it's ID**
+    Retrieves photo information by ID with various response formats based on user selection.
 
     Args:
     - photo_id (int): ID of the photo
@@ -207,6 +209,7 @@ async def update_photo_tags(
     ):
     """
     **Endpoint for editing tags of the photo**
+    Updates tags of the photo found by provided id, if valid new tags provided
 
     Args:
     - photo_id (int): ID of the photo
@@ -256,6 +259,7 @@ async def update_description(
     ):
     """
     **Endpoint for updating the description of the photo**
+    Updates description of the photo found by provided id, if valid new tags provided
 
     Args:
     - photo_id (int): ID of the photo
@@ -317,7 +321,10 @@ async def transform_photo(
         current_user: User = Depends(RoleChecker(["user"])),
         db: Session = Depends(get_db),
     ):
-    """AI is creating summary for transform_photo
+    """
+    **Photo transformation endpoint**
+    Transforms photo using cloudinary transformation services, returning qr with transformed photo url
+   
 
     Args:
     - photo_id (int): ID of the photo
