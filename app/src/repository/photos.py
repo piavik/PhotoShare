@@ -8,22 +8,23 @@ from app.src.database.models import Photo, Tag
 from app.src.schemas import PhotoModel, TagModel
 
 
-async def create_photo(db: Session, photo_to_create: PhotoModel, user_id: int, tags_list: list[str]) -> Photo:
+async def create_photo(db: Session, photo_to_create: PhotoModel, user_id: int, tags_list: list[str]):
     """
-    **Create photo endpoint**
-
+    create_photo
+    A function to create new photo record in database
     Args:
-        db (Session): [description]
-        photo_to_create (PhotoModel): [description]
-        user_id (int): [description]
-        tags_list (list[str]): [description]
+        db (Session): database
+        photo_to_create (PhotoModel): object to create schema
+        user_id (int): current session user id
+        tags_list (list[str]): list of tags to be added to photo
 
     Returns:
-        [Photo]: [description]
+        [ResponseType]: PhotoModel
     """
+
     new_photo = Photo(**photo_to_create.model_dump())
 
-    valid_tags = _process_tags(db, tags_list)
+    valid_tags = process_tags(db, tags_list)
     for tag in valid_tags:
         new_photo.tags.append(tag)
 
@@ -36,29 +37,33 @@ async def create_photo(db: Session, photo_to_create: PhotoModel, user_id: int, t
 
 async def get_photo_by_id(db: Session, photo_id: int):
     """
-    **Get photo by it's ID**
-
+    get_photo_by_id
+    A function to find photo in database by photo's id
     Args:
-        db (Session): [description]
-        photo_id (int): [description]
+        db (Session): database
+        photo_id (int): photo to be returned
 
     Returns:
-        [Photo]: [description]
-    """    
+        Photo or None: The photo object if found, otherwise `None`
+    """
     return db.query(Photo).filter(Photo.id == photo_id).first()
 
 
-async def edit_photo_tags(db: Session, photo_id: int, new_tags: str) -> Photo | None:
+async def edit_photo_tags(
+    db: Session, photo_id: int, new_tags: str
+):
     """
-    **Edit tag of the photo**
-
+    edit_photo_tags
+    A function to edit existing photo's tags
     Args:
-        db (Session): [description]
-        photo_id (int): [description]
-        new_tags (str): [description]
+        db (Session): database
+        photo_id (int): id of the photo to be addited
+        new_tags (str): string with new tags space separated
 
     Returns:
-        [Photo] or None: [description]
+        Photo or None: The photo object if succesfuly eddited, 
+        `None` if photo not found or new tags string include non 
+        of valid tags
     """
     photo = db.query(Photo).filter(Photo.id == photo_id).first()
 
@@ -67,11 +72,11 @@ async def edit_photo_tags(db: Session, photo_id: int, new_tags: str) -> Photo | 
 
     tags_list = [tag for tag in new_tags.strip().split(" ") if tag]
 
-    new_tags = _process_tags(db, tags_list)
+    new_tags = process_tags(db, tags_list)
 
     if not new_tags:
         return None
-     
+
     photo.tags.clear()
     photo.tags = new_tags
 
@@ -79,17 +84,19 @@ async def edit_photo_tags(db: Session, photo_id: int, new_tags: str) -> Photo | 
     return photo
 
 
-def _process_tags(db: Session, tags_list: list[str]) -> list:
+def process_tags(db: Session, tags_list: list[str]):
     """
-    **Inner function for tags validation**
-
+    process_tags
+    A function to check if provided tags exisit in database and return a list of valid tags
     Args:
-        db (Session): [description]
-        tags_list (list[str]): [description]
+        db (Session): database
+        tags_list (list[str]): list of strings to be added as tags to photo
 
     Returns:
-        [list]: [description]
-    """    
+        list[Tag]: A list of valid Tag model instances representing the processed tags,
+                   limited to the first 5 unique valid tags found or created.
+    """
+
     valid_tags = []
     unique_tags_name = set()
     for tag_name in tags_list:
@@ -112,22 +119,22 @@ def _process_tags(db: Session, tags_list: list[str]) -> list:
     return valid_tags[:5]
 
 
-async def edit_photo_description(db: Session, photo_id: int, user_id: int, new_description: str) -> Photo:
+async def edit_photo_description(db: Session, photo_id: int, user_id: int, new_description: str):
     """
-    **Edit description of the photo**
-
+    edit_photo_description
+    A function to edit current discription to photo.
     Args:
-        db (Session): [description]
-        photo_id (int): [description]
-        user_id (int): [description]
-        new_description (str): [description]
+        db (Session): database
+        photo_id (int): id of the photo description of which to be edited
+        user_id (int): current session user id
+        new_description (str): new description to be added to the photo
 
     Raises:
-        ValueError: [description]
+        ValueError: user try to delete existing description wo adding new
 
     Returns:
-        [Photo]: [description]
-    """    
+        Photo or None: The photo object if found, otherwise `None`
+    """
     photo = (
         db.query(Photo).filter(Photo.id == photo_id, Photo.owner_id == user_id).first()
     )
@@ -142,20 +149,19 @@ async def edit_photo_description(db: Session, photo_id: int, user_id: int, new_d
     return photo
 
 
-async def delete_photo(db: Session, photo_id: int, user_id: int) -> bool:
+async def delete_photo(db: Session, photo_id: int,):
     """
-    **Delete photo**
-
+    delete_photo
+    Deletes photo founded by provided id
     Args:
-        db (Session): [description]
-        photo_id (int): [description]
-        user_id (int): [description]
+        db (Session): database
+        photo_id (int): id of the photo to be deleted
 
     Returns:
-        [bool]: [description]
-    """    
+        True or None: 'True' is succesfully deleted, 'None' if photo was not found by id
+    """
     photo = (
-        db.query(Photo).filter(Photo.id == photo_id, Photo.owner_id == user_id).first()
+        db.query(Photo).filter(Photo.id == photo_id).first()
     )
     if not photo:
         return False
@@ -173,20 +179,24 @@ async def find_photos(db: Session,
                       end_date: Optional[date] = None,
                       ):
     """
-    **Search photo by given criteria**
+    find_photos
+    Searches for photos in the database that match specified filters. Photos can be filtered by
+    a keyword present in their description or tags, a rating range, and/or a creation date range.
+    Results can be sorted by rating or creation date in descending order
 
     Args:
-        db (Session): [description]
-        key_word (Optional[str], optional): [description]. Defaults to None.
-        sort_by (Optional[str], optional): [description]. Defaults to None.
-        min_rating (Optional[float], optional): [description]. Defaults to None.
-        max_rating (Optional[float], optional): [description]. Defaults to None.
-        start_date (Optional[date], optional): [description]. Defaults to None.
-        end_date (Optional[date], optional): [description]. Defaults to None.
+        db (Session): database
+        key_word (Optional[str], optional): key word to be used as filter for query. Defaults to None.
+        sort_by (Optional[str], optional): sort option for query return value. Defaults to None.
+        min_rating (Optional[float], optional): minimal photo rating to be used as filter to query. Defaults to None.
+        max_rating (Optional[float], optional): maximal photo rating to be used as filter to query. Defaults to None.
+        start_date (Optional[date], optional): minimal photo creation date to be used as filter to query. Defaults to None.
+        end_date (Optional[date], optional): maximal photo creation date to be used as filter to query. Defaults to None.
 
     Returns:
-        [list]: [description]
+        List[Photo]: A list of Photo objects that match the criteria. Returns an empty list if no keyword is provided or no photos match the criteria.
     """
+
     q = key_word.strip() if key_word else ""
     if not q:
         return []
@@ -212,7 +222,7 @@ async def find_photos(db: Session,
 
     if sort_by == 'rating':
         photos = photos.order_by(Photo.rating.desc())
-        
+
     elif sort_by == 'date':
         photos = photos.order_by(Photo.created_at.desc())
 
