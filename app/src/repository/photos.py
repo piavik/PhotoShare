@@ -9,7 +9,8 @@ from app.src.schemas import PhotoModel, TagModel
 
 
 async def create_photo(db: Session, photo_to_create: PhotoModel, user_id: int, tags_list: list[str]):
-    """create_photo
+    """
+    create_photo
     A function to create new photo record in database
     Args:
         db (Session): database
@@ -23,7 +24,7 @@ async def create_photo(db: Session, photo_to_create: PhotoModel, user_id: int, t
 
     new_photo = Photo(**photo_to_create.model_dump())
 
-    valid_tags = _process_tags(db, tags_list)
+    valid_tags = process_tags(db, tags_list)
     for tag in valid_tags:
         new_photo.tags.append(tag)
 
@@ -35,7 +36,8 @@ async def create_photo(db: Session, photo_to_create: PhotoModel, user_id: int, t
 
 
 async def get_photo_by_id(db: Session, photo_id: int):
-    """get_photo_by_id
+    """
+    get_photo_by_id
     A function to find photo in database by photo's id
     Args:
         db (Session): database
@@ -50,7 +52,8 @@ async def get_photo_by_id(db: Session, photo_id: int):
 async def edit_photo_tags(
     db: Session, photo_id: int, new_tags: str
 ):
-    """edit_photo_tags
+    """
+    edit_photo_tags
     A function to edit existing photo's tags
     Args:
         db (Session): database
@@ -69,7 +72,7 @@ async def edit_photo_tags(
 
     tags_list = [tag for tag in new_tags.strip().split(" ") if tag]
 
-    new_tags = _process_tags(db, tags_list)
+    new_tags = process_tags(db, tags_list)
 
     if not new_tags:
         return None
@@ -82,7 +85,8 @@ async def edit_photo_tags(
 
 
 def process_tags(db: Session, tags_list: list[str]):
-    """process_tags
+    """
+    process_tags
     A function to check if provided tags exisit in database and return a list of valid tags
     Args:
         db (Session): database
@@ -116,7 +120,8 @@ def process_tags(db: Session, tags_list: list[str]):
 
 
 async def edit_photo_description(db: Session, photo_id: int, user_id: int, new_description: str):
-    """edit_photo_description
+    """
+    edit_photo_description
     A function to edit current discription to photo.
     Args:
         db (Session): database
@@ -145,7 +150,8 @@ async def edit_photo_description(db: Session, photo_id: int, user_id: int, new_d
 
 
 async def delete_photo(db: Session, photo_id: int,):
-    """delete_photo
+    """
+    delete_photo
     Deletes photo founded by provided id
     Args:
         db (Session): database
@@ -172,7 +178,8 @@ async def find_photos(db: Session,
                       start_date: Optional[date] = None,
                       end_date: Optional[date] = None,
                       ):
-    """find_photos
+    """
+    find_photos
     Searches for photos in the database that match specified filters. Photos can be filtered by
     a keyword present in their description or tags, a rating range, and/or a creation date range.
     Results can be sorted by rating or creation date in descending order
