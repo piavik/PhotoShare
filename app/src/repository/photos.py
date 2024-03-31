@@ -23,7 +23,7 @@ async def create_photo(db: Session, photo_to_create: PhotoModel, user_id: int, t
 
     new_photo = Photo(**photo_to_create.model_dump())
 
-    valid_tags = process_tags(db, tags_list)
+    valid_tags = _process_tags(db, tags_list)
     for tag in valid_tags:
         new_photo.tags.append(tag)
 
@@ -69,7 +69,7 @@ async def edit_photo_tags(
 
     tags_list = [tag for tag in new_tags.strip().split(" ") if tag]
 
-    new_tags = process_tags(db, tags_list)
+    new_tags = _process_tags(db, tags_list)
 
     if not new_tags:
         return None
@@ -158,7 +158,7 @@ async def delete_photo(db: Session, photo_id: int,):
         db.query(Photo).filter(Photo.id == photo_id).first()
     )
     if not photo:
-        return None
+        return False
     db.delete(photo)
     db.commit()
     return True

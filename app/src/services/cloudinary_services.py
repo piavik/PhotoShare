@@ -44,15 +44,16 @@ async def delete_photo(cloudinary_url: str):
 
 
 async def transformed_photo_url(
-    photo_url: str,
-    width: Optional[int] = None,
-    height: Optional[int] = None,
-    crop: Optional[str] = None,
-    angle: Optional[int] = None,
-    filter: Optional[str] = None,
-    gravity: Optional[str] = None,
-):
-    """transformed_photo_url
+        photo_url: str,
+        width: Optional[int] = None,
+        height: Optional[int] = None,
+        crop: Optional[str] = None,
+        angle: Optional[int] = None,
+        filter: Optional[str] = None,
+        gravity: Optional[str] = None,
+    ):
+    """
+    transformed_photo_url
     Applies provided transformation parameters and return url to transformed photo
     Args:
         photo_url (str): photo's url on cloudinary

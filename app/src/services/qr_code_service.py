@@ -3,7 +3,8 @@ from io import BytesIO
 
 
 def generate_qr_code(url: str):
-    """generate_qr_code
+    """
+    generate_qr_code
     Generates QR Code for provided url
     Args:
         url (str): url to be added as qr code data

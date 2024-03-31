@@ -25,9 +25,18 @@ async def update_comment(
         current_user: User = Depends(auth_service.get_current_user),
         db: Session = Depends(get_db)
     ):
-    '''
-    Create or update comment
-    '''
+    """
+    **Endpoint for creating or updating comment to the photo**
+
+    Args:
+    - comment_text (str): Text of the new comment
+    - photo_id (int): ID of the photo that is commented
+    - current_user (User, optional): current user object. Defaults to Depends(auth_service.get_current_user).
+    - db (Session, optional): database session. Defaults to Depends(get_db).
+
+    Returns:
+    - [CommentResponse]: comment responce object
+    """
     comment_to_update = CommentModel(
         text     = comment_text,
         photo_id = photo_id,
@@ -54,10 +63,21 @@ async def delete_comment(
         current_user: User = Depends(RoleChecker(allowed_roles=["moder"])),
         db: Session = Depends(get_db)
     ):
-    '''
-    Delete comment
-    '''
+    """
+    **Endpoint for deleting the comment**
 
+    Args:
+    - photo_id (int): ID of the photo
+    - user_id (int): ID of the comment author
+    - current_user (User, optional): current user object. Must be either "Moder" or "admin" role.
+    - db (Session, optional): database session. Defaults to Depends(get_db).
+
+    Raises:
+    - HTTPException: 404 Comment does not exist
+
+    Returns:
+    - message: message
+    """
     result = await repository_comments.delete_comment(db, photo_id, user_id)
 
     if not result:
