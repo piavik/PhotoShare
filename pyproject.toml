@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "PhotoShare"
-version = "0.1.0"
+version = "0.1.1"
 description = "FastAPI pictures management app"
 authors = ["Alexey Lomakin <lomakin.dec1970@gmail.com>", "Oleksii Piavka <piavik@gmail.com>", "Olga Ivanko <o.ivanko@me.com", "Roman Siusiailo <siusiailoroman@gmail.com>"]
 license = "MIT"
@@ -27,7 +27,6 @@ fastapi-mail = "^1.4.1"
 fastapi-limiter = "^0.1.6"
 python-multipart = "^0.0.9"
 bcrypt = "4.0.1"
-httpx = "^0.27.0"
 
 [tool.poetry.group.dev.dependencies]
 Sphinx = "^7.2.6"

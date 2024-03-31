@@ -49,9 +49,7 @@ async def get_photo_by_id(db: Session, photo_id: int):
     return db.query(Photo).filter(Photo.id == photo_id).first()
 
 
-async def edit_photo_tags(
-    db: Session, photo_id: int, new_tags: str
-):
+async def edit_photo_tags(db: Session, photo_id: int, new_tags: str):
     """
     edit_photo_tags
     A function to edit existing photo's tags
@@ -84,7 +82,8 @@ async def edit_photo_tags(
     return photo
 
 
-def process_tags(db: Session, tags_list: list[str]):
+
+def process_tags(db: Session, tags_list: list[str]) -> list:
     """
     process_tags
     A function to check if provided tags exisit in database and return a list of valid tags
