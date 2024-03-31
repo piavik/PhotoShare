@@ -18,6 +18,14 @@ red = redis.Redis(host=settings.redis_host, port=settings.redis_port, db=0)
 
 @router.get("/me", response_model=UserDb)
 async def read_users_me(current_user: User = Depends(RoleChecker(allowed_roles=["user"]))):
+    """
+    Return information about the current user.
+
+    :param current_user: Data of the current user.
+    :type current_user: User
+    :return: Return data about the current user.
+    :rtype: User
+    """
     return current_user
 
 
@@ -25,6 +33,18 @@ async def read_users_me(current_user: User = Depends(RoleChecker(allowed_roles=[
 async def update_avatar_user(file: UploadFile = File(),
                              current_user: User = Depends(RoleChecker(allowed_roles=["user"])),
                              db: Session = Depends(get_db)):
+    """
+    Update the avatar of the current user.
+
+    :param file: File to be updated with the avatar.
+    :type file: UploadFile
+    :param current_user: Data of the current user.
+    :type current_user: User
+    :param db: The database session.
+    :type db: Session
+    :return: Data of the updated user.
+    :rtype: User
+    """
     cloudinary.config(
         cloud_name=settings.cloudinary_name,
         api_key=settings.cloudinary_api_key,
@@ -44,6 +64,20 @@ async def update_avatar_user(file: UploadFile = File(),
 async def change_user_role(user_email: str, new_role: str,
                            current_user: User = Depends(RoleChecker(allowed_roles=["moder"])),
                            db: Session = Depends(get_db)):
+    """
+    Change user role by email.
+
+    :param user_email: Email address of the user to change role.
+    :type user_email: str
+    :param new_role: New role for user.
+    :type new_role: str
+    :param current_user: Current user.
+    :type current_user: User
+    :param db: The database session.
+    :type db: Session
+    :return: Data about the changed user.
+    :rtype: User
+    """
     if new_role not in ["user", "moder", "admin"]:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="This role does not exist")
     user = await repository_users.get_user_by_email(user_email, db)
@@ -61,6 +95,18 @@ async def change_user_role(user_email: str, new_role: str,
 async def change_password(body: UserPassword,
                           current_user: User = Depends(RoleChecker(allowed_roles=["user"])),
                           db: Session = Depends(get_db)):
+    """
+    Change password to current user.
+
+    :param body: Data to change user password (old_password, new_password).
+    :type body: UserPassword
+    :param current_user: The user to change password.
+    :type current_user: User
+    :param db: The database session.
+    :type db: Session
+    :return: Message that password was changed.
+    :rtype: str
+    """
     if not auth_service.verify_password(body.old_password, current_user.password):
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid password")
     message = auth_service.update_password(current_user, body.new_password, db)
@@ -71,6 +117,20 @@ async def change_password(body: UserPassword,
 @router.post("/forgot_password")
 async def forgot_password(body: UserNewPassword, background_tasks: BackgroundTasks, request: Request,
                           db: Session = Depends(get_db)):
+    """
+    Request to reset password.
+
+    :param body: Data to reset user password (email, new_password).
+    :type body: UserNewPassword
+    :param background_tasks: Tasks to run in background.
+    :type background_tasks: BackgroundTasks
+    :param request: The request to send email.
+    :type request: Request
+    :param db: The database session.
+    :type db: Session
+    :return: Message that password was changed.
+    :rtype: str
+    """
     try:
         user = await repository_users.get_user_by_email(body.email, db)
     except HTTPException:
@@ -82,6 +142,16 @@ async def forgot_password(body: UserNewPassword, background_tasks: BackgroundTas
 
 @router.patch('/reset_password/{token}')
 async def reset_password(token: str, db: Session = Depends(get_db)):
+    """
+    Change password to user that request reset password.
+
+    :param token: The token that was sent on email to reset password.
+    :type token: str
+    :param db: The database session.
+    :type db: Session
+    :return: Message that password was changed.
+    :rtype: dict
+    """
     email = await auth_service.get_email_from_token(token)
     password = await auth_service.get_password_from_token(token)
     user = await repository_users.get_user_by_email(email, db)
@@ -93,6 +163,18 @@ async def reset_password(token: str, db: Session = Depends(get_db)):
 
 @router.patch('/ban')
 async def ban_user(email: str, current_user: User = Depends(RoleChecker(['admin'])), db: Session = Depends(get_db)):
+    """
+    Ban user by email.
+
+    :param email: The email of user that will be banned.
+    :type email: str
+    :param current_user: The current user.
+    :type current_user: User
+    :param db: The database session.
+    :type db: Session
+    :return: Message with username of banned user.
+    :rtype: str
+    """
     user = await repository_users.get_user_by_email(email, db)
     if user is None:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Verification error")
@@ -104,6 +186,18 @@ async def ban_user(email: str, current_user: User = Depends(RoleChecker(['admin'
 
 @router.patch('/unban')
 async def unban_user(email: str, _: User = Depends(RoleChecker(['admin'])), db: Session = Depends(get_db)):
+    """
+    Unban user by email.
+
+    :param email: The email of user that will be unbanned.
+    :type email: str
+    :param _: The current user.
+    :type _: User
+    :param db: The database session.
+    :type db: Session
+    :return: Message with username of unbanned user.
+    :rtype: str
+    """
     user = await repository_users.get_user_by_email(email, db)
     if user is None:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="verification error")
