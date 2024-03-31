@@ -1,8 +1,10 @@
+import sys
+
+sys.path.append("F:\\Projects\\Python_projects\\Alex\\HWGroup5\\PhotoShare")
 import unittest
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
-from models import Base, User, Photo, Comment, Tag
-from main import rate_photo, update_photo_ratings
+from app.src.database.models import Base, User, Photo, Comment, Tag, rate_photo
 
 
 class TestRatePhoto(unittest.TestCase):

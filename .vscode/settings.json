@@ -1,3 +1,6 @@
 {
-  "python.analysis.extraPaths": ["./app/src/database"]
+  "python.analysis.extraPaths": [
+    "./app/src/database",
+    "./app"
+  ]
 }
