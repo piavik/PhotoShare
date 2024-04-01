@@ -112,7 +112,7 @@ async def delete_photo(
     Returns:
     - message: message
     """    
-    photo = db.query(Photo).filter(Photo.id == photo_id).first()
+    photo = await repository_photos.get_photo_by_id(db, photo_id)
 
     if not photo:
         raise HTTPException(status_code=404, detail="Photo not found")
