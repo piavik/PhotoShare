@@ -9,12 +9,12 @@ async def get_user_by_email(email: str, db: Session) -> User | None:
     """
     Retrieves a user with the specified email.
 
-    :param email: The email of the user to retrieve.
-    :type email: str
-    :param db: The database session.
-    :type db: Session
-    :return: The user with the specified email, or None if it does not exist.
-    :rtype: User | None
+    Args:
+        email (str): The email of the user to retrieve.
+        db (Session, optional): database session.
+    Returns:
+        User | None: The user with the specified email, or None if it does not exist.
+
     """
     return db.query(User).filter(User.email == email).first()
 
