@@ -10,8 +10,9 @@ from app.src.services.auth import auth_service, RoleChecker
 from app.src.services.email import send_email
 from app.src.routes.users import red
 
-import app.src.services.logging as log
-# router = APIRouter(prefix="/auth", tags=["auth"], route_class=log.LoggingRoute) # for debug
+# logs for testing
+#import tests.logging as log
+# router = APIRouter(prefix="/auth", tags=["auth"], route_class=log.LoggingRoute)
 router = APIRouter(prefix="/auth", tags=["auth"])
 
 security = HTTPBearer()
