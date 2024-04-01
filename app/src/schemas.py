@@ -10,14 +10,21 @@ class UserModel(BaseModel):
     password: str = Field(min_length=6, max_length=20)
 
 
+class RoleOptions(str, Enum):
+    user = "user"
+    moder = "moder"
+    admin = "admin"
+
+
 class UserDb(BaseModel):
     id: int
     username: str
     email: EmailStr
     avatar: str
     created_at: datetime
-    role: str
+    role: RoleOptions
     model_config = ConfigDict(from_attributes=True)
+
 
 
 class UserResponse(BaseModel):
