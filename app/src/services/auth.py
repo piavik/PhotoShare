@@ -80,7 +80,7 @@ class Auth:
             str: Refresh token
         """
         to_encode = data.copy()
-        expire = datetime.utcnow() + timedelta(days)
+        expire = datetime.utcnow() + timedelta(days=expires_delta)
         to_encode.update({"iat": datetime.utcnow(), "exp": expire, "scope": "refresh_token"})
         token = jwt.encode(to_encode, self.SECRET_KEY, algorithm=self.ALGORITHM)
         return token
