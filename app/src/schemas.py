@@ -1,6 +1,7 @@
 from pydantic import BaseModel, Field, EmailStr, ConfigDict, HttpUrl, constr
 from datetime import datetime
 from typing import Optional, List
+from enum import Enum
 
 
 class UserModel(BaseModel):
@@ -74,6 +75,39 @@ class PhotoDetailedResponse(BaseModel):
     owner_id: int
     description: Optional[str] = None
     tags: List[TagModel] = []
+    rating: float
     created_at: datetime
     updated_at: datetime
     model_config = ConfigDict(from_attributes=True)
+
+
+class SortOptions(str, Enum):
+    rating = "rating"
+    date = "date"
+
+
+class ResponceOptions(str, Enum):
+    detailed = "detailed"
+    url = "url"
+    qr_code = "QR code"
+
+
+class UrlResponse(BaseModel):
+    url: HttpUrl
+
+
+class CommentModel(BaseModel):
+    text: str
+    photo_id: int
+    user_id: int
+
+
+class CommentDb(BaseModel):
+    text: str
+    photo_id: int
+    user_id: int
+    model_config = ConfigDict(from_attributes=True)
+
+class CommentResponse(BaseModel):
+    comment: CommentDb
+    message: str = "Comment updated"

@@ -21,15 +21,15 @@ async def get_user_by_email(email: str, db: Session) -> User | None:
 
 async def create_user(body: UserModel, db: Session) -> User:
     """
-    Creates a new user.
+    Create a new user
 
-    :param body: The data for the user to create.
-    :type body: UserModel
-    :param db: The database session.
-    :type db: Session
-    :return: The newly created user.
-    :rtype: User
-    """
+    Args:
+        body (UserModel): The data for the user to create.
+        db (Session): database session.
+
+    Returns:
+        [User]: he newly created user
+    """    
     avatar = None
     try:
         g = Gravatar(body.email)
@@ -45,34 +45,29 @@ async def create_user(body: UserModel, db: Session) -> User:
 
 async def update_token(user: User, token: str | None, db: Session) -> None:
     """
-    Updates a token for a specific user.
+    Update refresh token in the database
 
-    :param user: The user to update the token for.
-    :type user: User
-    :param token: The token to update.
-    :type token: str
-    :param db: The database session.
-    :type db: Session
-    :return: None.
-    :rtype: None
-    """
+    Args:
+        user (User): The user to update the token for.
+        token (str): The token to update.
+        db (Session): The database session.
+    """    
     user.refresh_token = token
     db.commit()
 
 
 async def update_avatar(email: str, url: str, db: Session) -> User:
     """
-    Updates an avatar for a specific user.
+    Update user's avatar
 
-    :param email: Email of the specific user to update an avatar for.
-    :type email: str
-    :param url: The URL of the avatar.
-    :type url: str
-    :param db: The database session.
-    :type db: Session
-    :return: Updated user.
-    :rtype: User
-    """
+    Args:
+        email (str):  Email of the specific user to update an avatar for.
+        url (str): The URL of the avatar picture.
+        db (Session): The database session.
+
+    Returns:
+        [User]: Updated user.
+    """    
     user = await get_user_by_email(email, db)
     user.avatar = url
     db.commit()
@@ -81,15 +76,14 @@ async def update_avatar(email: str, url: str, db: Session) -> User:
 
 async def confirmed_email(email: str, db: Session) -> None:
     """
-    Change param of confirmation email for specific user.
+    Check email confirmation flag in the database
 
-    :param email: The email of the user to confirm.
-    :type email: str
-    :param db: The database session.
-    :type db: Session
-    :return: None.
-    :rtype: None
-    """
+    Args:
+        email (str): The email of the user to confirm.
+        db (Session): The email of the user to confirm.
+    Returns:
+        None
+    """    
     user = await get_user_by_email(email, db)
     user.confirmed = True
     if user.id == 1:
@@ -99,17 +93,16 @@ async def confirmed_email(email: str, db: Session) -> None:
 
 def change_user_role(user: User, role: str, db: Session) -> User:
     """
-    Change param of role for specific user.
+    Change the role of the user
 
-    :param user: The user to change role.
-    :type user: User
-    :param role: New role for user.
-    :type role: str
-    :param db: The database session.
-    :type db: Session
-    :return: Updated user.
-    :rtype: User
-    """
+    Args:
+        user (User): The user to change role.
+        role (str): New role for user.
+        db (Session): The database session.
+
+    Returns:
+        [User]: Updated user.
+    """    
     user.role = role
     db.commit()
     return user
@@ -117,15 +110,15 @@ def change_user_role(user: User, role: str, db: Session) -> User:
 
 def ban_user(user: User, db: Session) -> str:
     """
-    Ban user.
+    Set user ban flag in the database
 
-    :param user: The user to ban.
-    :type user: User
-    :param db: The database session.
-    :type db: Session
-    :return: Message with username of banned user.
-    :rtype: str
-    """
+    Args:
+        user (User): The user to ban.
+        db (Session): The database session.
+
+    Returns:
+        [str]: Message with the username of banned user.
+    """    
     user.banned = True
     db.commit()
     return f"{user.username} has been banned"
@@ -133,15 +126,15 @@ def ban_user(user: User, db: Session) -> str:
 
 def unban_user(user: User, db: Session) -> str:
     """
-    Unban user.
+    Clear user ban flag in the database
 
-    :param user: The user to unban.
-    :type user: User
-    :param db: The database session.
-    :type db: Session
-    :return: Message with username of unbanned user.
-    :rtype: str
-    """
+    Args:
+        user (User): The user to unban.
+        db (Session): The database session.
+
+    Returns:
+        str: Message with username of unbanned user.
+    """    
     user.banned = False
     db.commit()
     return f"{user.username} has been unbanned"

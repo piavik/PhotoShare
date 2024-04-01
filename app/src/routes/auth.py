@@ -10,26 +10,31 @@ from app.src.services.auth import auth_service, RoleChecker
 from app.src.services.email import send_email
 from app.src.routes.users import red
 
+# logs for testing
+#import tests.logging as log
+# router = APIRouter(prefix="/auth", tags=["auth"], route_class=log.LoggingRoute)
 router = APIRouter(prefix="/auth", tags=["auth"])
+
 security = HTTPBearer()
 
 
 @router.post("/signup", response_model=UserResponse, status_code=status.HTTP_201_CREATED)
 async def signup(body: UserModel, background_tasks: BackgroundTasks, request: Request, db: Session = Depends(get_db)):
     """
-    Sign up a new user.
+    **User sign-up endpoint**
 
-    :param body: User details.
-    :type body: UserModel
-    :param background_tasks: Background tasks.
-    :type background_tasks: BackgroundTasks
-    :param request: Request object.
-    :type request: Request
-    :param db: The database session.
-    :type db: Session
-    :return: Dict with user details and message.
-    :rtype: Dict
-    """
+    Args:
+    - body (UserModel): user info dictionary
+    - background_tasks (BackgroundTasks): async ring scheduler
+    - request (Request): request object
+    - db (Session, optional): database session.
+
+    Raises:
+    - HTTPException: 409 Account already exists
+
+    Returns:
+    - UserResponse: execution result
+    """    
     exist_user = await repository_users.get_user_by_email(body.email, db)
     if exist_user:
         raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="Account already exists")
@@ -42,15 +47,20 @@ async def signup(body: UserModel, background_tasks: BackgroundTasks, request: Re
 @router.post("/login", response_model=TokenModel)
 async def login(body: OAuth2PasswordRequestForm = Depends(), db: Session = Depends(get_db)):
     """
-    Login user.
+    **User login endpoint**
 
-    :param body: Data of the user to login.
-    :type body: OAuth2PasswordRequestForm
-    :param db: The database session.
-    :type db: Session
-    :return: Return dict with access token and refresh token
-    :rtype: Dict
-    """
+    Args:
+    - body (OAuth2PasswordRequestForm, optional): authentication form.
+    - db (Session, optional): database session.
+
+    Raises:
+    - HTTPException: 401 Invalid email
+    - HTTPException: 401 Email not confirmed
+    - HTTPException: 401 Invalid password
+
+    Returns:
+    - [TokenModel]: token dictionary {access_token, refresh_token, token_type}
+    """    
     user = await repository_users.get_user_by_email(body.username, db)
     if user is None:
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid email")
@@ -67,14 +77,17 @@ async def login(body: OAuth2PasswordRequestForm = Depends(), db: Session = Depen
 @router.get('/refresh_token', response_model=TokenModel)
 async def refresh_token(credentials: HTTPAuthorizationCredentials = Security(security), db: Session = Depends(get_db)):
     """
-    Refresh access token.
+    **Refresh access tokens**
 
-    :param credentials: Authorization credentials.
-    :type credentials: HTTPAuthorizationCredentials
-    :param db: The database session.
-    :type db: Session
-    :return: Return dict with access token and refresh token
-    :rtype: dict
+    Args:
+    - credentials (HTTPAuthorizationCredentials): current refresh token.
+    - db (Session): database session.
+
+    Raises:
+    - HTTPException: 401 Invalid refresh token
+
+    Returns:
+    - [TokenModel]: {access_token, refresh_token, token_type}
     """
     token = credentials.credentials
     email = await auth_service.decode_refresh_token(token)
@@ -92,15 +105,20 @@ async def refresh_token(credentials: HTTPAuthorizationCredentials = Security(sec
 @router.get('/confirmed_email/{token}')
 async def confirmed_email(token: str, db: Session = Depends(get_db)):
     """
-    Confirm email verification.
+    **API endpoint for email confirmation**
 
-    :param token: Token used for verification.
-    :type token: str
-    :param db: The database session.
-    :type db: Session
-    :return: Message that email is confirmed.
-    :rtype: dict
-    """
+    Correct use: http call by pressing a button in email sent to the user.
+
+    Args:
+    - token (str): access token
+    - db (Session, optional): database session.
+
+    Raises:
+    - HTTPException: 400 Verification error
+
+    Returns:
+    - message: message
+    """    
     email = await auth_service.get_email_from_token(token)
     user = await repository_users.get_user_by_email(email, db)
     if user is None:
@@ -115,19 +133,17 @@ async def confirmed_email(token: str, db: Session = Depends(get_db)):
 async def request_email(body: RequestEmail, background_tasks: BackgroundTasks, request: Request,
                         db: Session = Depends(get_db)):
     """
-    Sends an email to confirm email verification.
+    **Request email for password reset**
 
-    :param body: The data of the user to confirm email.
-    :type body: RequestEmail
-    :param background_tasks: Background tasks.
-    :type background_tasks: BackgroundTasks
-    :param request: The request to send the email.
-    :type request: Request
-    :param db: The database session.
-    :type db: Session
-    :return: Message.
-    :rtype: dict
-    """
+    Args:
+    - body (RequestEmail): object with email request parameters
+    - background_tasks (BackgroundTasks): async ring scheduler
+    - request (Request): request object
+    - db (Session, optional): database session.
+
+    Returns:
+    - message: message
+    """    
     user = await repository_users.get_user_by_email(body.email, db)
 
     if user.confirmed:
@@ -141,15 +157,15 @@ async def request_email(body: RequestEmail, background_tasks: BackgroundTasks, r
 async def logout(token: str = Depends(auth_service.oauth2_scheme),
                  _: User = Depends(RoleChecker(allowed_roles=["user"]))):
     """
-    Logout the current user.
+    **User logut endpoint**
 
-    :param token: The access token for the current user.
-    :type token: str
-    :param _: Current user data.
-    :type _: User
-    :return: Message that user is logged out.
-    :rtype: dict
-    """
+    Args:
+    - token (str, optional): The access token for the current user.
+    - _ (User, optional): Current user data.
+
+    Returns:
+    - message: message
+    """                 
     red.set(token, 1)
     red.expire(token, 900)
     return {"message": "Logged out"}

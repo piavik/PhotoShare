@@ -17,6 +17,9 @@ from app.src.database.models import User
 
 
 class Auth:
+    '''
+    Class for user authentication and JWT generation
+    '''
     pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
     SECRET_KEY = settings.jwt_secret_key
     ALGORITHM = settings.jwt_algorithm
@@ -25,76 +28,76 @@ class Auth:
 
     def verify_password(self, plain_password, hashed_password):
         """
-        Verify the password.
+        Verify if plain_password corresponds to hashed_password
 
-        :param plain_password: Password to verify.
-        :type plain_password: str
-        :param hashed_password: Hashed password from database.
-        :type hashed_password: str
-        :return: True if the password is correct, False otherwise.
-        :rtype: bool
+        Args:
+            plain_password (str): Plaintext password to verify.
+            hashed_password (bool): Hashed password from the database.
+
+        Returns:
+            bool: True if the password is correct, False otherwise.
         """
         return self.pwd_context.verify(plain_password, hashed_password)
 
     def get_password_hash(self, plain_password):
         """
-        Get the hashed password
+        Create hash for provided plaintext password
 
-        :param password: Password to hash.
-        :type password: str
-        :return: Hashed password.
-        :rtype: str
+        Args:
+            password (str): plaintext password to hash.
+
+        Returns:
+            str: Hash for provided plaintext password.
         """
         return self.pwd_context.hash(plain_password)
 
-    async def create_access_token(self, data: dict, expires_delta: Optional[float] = None) -> str:
+    async def create_access_token(self, data: dict, expires_delta: int = 15) -> str:
         """
-        Create a new access token.
+        Create JWT access token
 
-        :param data: Dict of data.
-        :type data: dict
-        :param expires_delta: Expiration time in seconds to access token. Default value is 15 minutes.
-        :type expires_delta: float, optional
-        :return: Access token
-        :rtype: str
+        Args:
+            data (dict): Claims for JWT
+            expires_delta (int, optional): The number of minutes for JWT lifetime. Default value is 15 minutes.
+
+        Returns:
+            str:  Access token
         """
         to_encode = data.copy()
-        if expires_delta:
-            expire = datetime.utcnow() + timedelta(seconds=expires_delta)
-        else:
-            expire = datetime.utcnow() + timedelta(minutes=15)
+        expire = datetime.utcnow() + timedelta(minutes=expires_delta)
         to_encode.update({"iat": datetime.utcnow(), "exp": expire, "scope": "access_token"})
         token = jwt.encode(to_encode, self.SECRET_KEY, algorithm=self.ALGORITHM)
         return token
 
-    async def create_refresh_token(self, data: dict, expires_delta: Optional[float] = None) -> str:
+    async def create_refresh_token(self, data: dict, expires_delta: int = 7) -> str:
         """
-        Create a new refresh token.
+        Create a new refresh token
 
-        :param data: Dict of data.
-        :type data: dict
-        :param expires_delta: Expiration time in seconds to access token. Default value is 7 days.
-        :type expires_delta: float, optional
-        :return: Refresh token
-        :rtype: str
+        Args:
+            data (dict):  Claims for JWT
+            expires_delta (int, optional): Expiration time in days to access token. Default value is 7 days.
+
+        Returns:
+            str: Refresh token
         """
         to_encode = data.copy()
-        if expires_delta:
-            expire = datetime.utcnow() + timedelta(seconds=expires_delta)
-        else:
-            expire = datetime.utcnow() + timedelta(days=7)
+        expire = datetime.utcnow() + timedelta(days)
         to_encode.update({"iat": datetime.utcnow(), "exp": expire, "scope": "refresh_token"})
         token = jwt.encode(to_encode, self.SECRET_KEY, algorithm=self.ALGORITHM)
         return token
 
     async def decode_refresh_token(self, refresh_token: str) -> str:
         """
-        Decode a refresh token.
+        Get user's email from JWT refresh token
 
-        :param refresh_token: Refresh token to decode.
-        :type refresh_token: str
-        :return: If refresh token is valid, return email of the user. Otherwise, return None/
-        :rtype: str
+        Args:
+            refresh_token (str): Refresh token
+
+        Raises:
+            HTTPException: 401 Unauthorized. Invalid scope for token
+            HTTPException: 401 Unauthorized. Could not validate credentials
+
+        Returns:
+            str: User's email
         """
         try:
             payload = jwt.decode(refresh_token, self.SECRET_KEY, algorithms=[self.ALGORITHM])
@@ -107,14 +110,17 @@ class Auth:
 
     async def get_current_user(self, token: str = Depends(oauth2_scheme), db: Session = Depends(get_db)):
         """
-        Get current user information by token.
+        Get authenticated user onject
 
-        :param token: JWT token to get user info.
-        :type token: str
-        :param db: The database session.
-        :type db: Session
-        :return: User data or None if token is invalid.
-        :rtype: User
+        Args:
+            token (str): User's access token.
+            db (Session, optional): database session.
+
+        Raises:
+            credentials_exception: Custom HTTPException for 401 Unauthorized.
+
+        Returns:
+            User: Authenticated user object
         """
         credentials_exception = HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
@@ -152,10 +158,11 @@ class Auth:
         """
         Create an email token to send on email verification.
 
-        :param data: Data to be sent.
-        :type data: dict
-        :return: A token that can be used to verify email.
-        :rtype: str
+        Args:
+            data (dict): Claims for JWT
+
+        Returns:
+            str: JWT token that will be sent in email URL
         """
         to_encode = data.copy()
         if expires_delta:
@@ -168,12 +175,16 @@ class Auth:
 
     async def get_email_from_token(self, token: str) -> str:
         """
-        Get an email address from token.
+        Get user's email from JWT token
 
-        :param token: A token that can be used to verify email.
-        :type token: str
-        :return: An email address if valid, otherwise None.
-        :rtype: str
+        Args:
+            token (str): JWT token
+
+        Raises:
+            HTTPException: JWT token is invalid
+
+        Returns:
+            str: user's emailobtained from JWT token
         """
         try:
             payload = jwt.decode(token, self.SECRET_KEY, algorithms=[self.ALGORITHM])
@@ -185,12 +196,16 @@ class Auth:
 
     async def get_password_from_token(self, token: str) -> str:
         """
-        Get a password from token.
+        Get reset password from JWT token
 
-        :param token: A token that can be used to take password.
-        :type token: str
-        :return: A password if valid, otherwise None.
-        :rtype: str
+        Args:
+            token (str): JWT token
+
+        Raises:
+            HTTPException: 422 Invalid token for password reset
+
+        Returns:
+            str: new password
         """
         try:
             payload = jwt.decode(token, self.SECRET_KEY, algorithms=[self.ALGORITHM])
