@@ -250,7 +250,7 @@ async def update_photo_tags(
     return updated_photo
 
 
-@router.patch("/{photo_id}/description", response_model=PhotoResponse)
+@router.patch("/{photo_id}", response_model=PhotoResponse)
 async def update_description(
         photo_id: int,
         description: str = Form(...),
