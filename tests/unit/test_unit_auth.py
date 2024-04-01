@@ -16,10 +16,11 @@ from app.src.services.auth import auth_service
 class TestAuth(unittest.IsolatedAsyncioTestCase):
     def setUp(self):
         self.session = MagicMock(spec=Session)
-        self.user = User(id=1, password="test_pass")
+        self.user = User(id=1, email="test_email@gmail.com", password="test_pass", confirmed=True)
         self.email = "test_email@gmail.com"
         self.password = "password"
         self.hash_password = "$2b$12$PKsdFbF1Ob/DVhKazhTtLOHReegI/kOfPFZCedSaHQKX6AyNye1bO"
+        self.access_token = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJ0ZXN0X2VtYWlsQGdtYWlsLmNvbSIsImlhdCI6MTcxMTg3OTgwNywiZXhwIjoxNzExODgwMzA3LCJzY29wZSI6ImFjY2Vzc190b2tlbiJ9.JfvXZveuqyasg3nTELQl9LnKUf7aRWWWymgaG-ahagk"
         self.refresh_token ="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJ0ZXN0X2VtYWlsQGdtYWlsLmNvbSIsImlhdCI6MTcxMTcyMzExNywiZXhwIjoxNzEyMzI3OTE3LCJzY29wZSI6InJlZnJlc2hfdG9rZW4ifQ.LQL501KbWQZEW7P365TxAJ1D52SG_GiSx8pfPGp6UzU"
         self.password_token = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJ0ZXN0X2VtYWlsQGdtYWlsLmNvbSIsInBhc3MiOiJwYXNzd29yZCIsImlhdCI6MTcxMTczMzg1NCwiZXhwIjoxNzEyMzM4NjU0LCJzY29wZSI6InJlZnJlc2hfdG9rZW4ifQ.h0BeHSGFmphCvm8DAD5DWc7VX96GI5bypsSYY6tx418"
 
@@ -38,7 +39,7 @@ class TestAuth(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(result, True)
 
     async def test_create_access_token(self):
-        token = await auth_service.create_access_token(data={"sub": self.email}, expires_delta=10)
+        token = await auth_service.create_access_token(data={"sub": self.email}, expires_delta=500)
         jwt_payload = jwt.decode(token, auth_service.SECRET_KEY, [auth_service.ALGORITHM])
         test_email = jwt_payload['sub']
         self.assertEqual(test_email, self.email)
@@ -56,7 +57,10 @@ class TestAuth(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(email, self.email)
 
     async def test_get_current_user(self):
-        ...
+        self.session.query().filter().first.return_value = self.user
+        ver_user = await auth_service.get_current_user(self.access_token, self.session)
+        self.assertEqual(ver_user.id, self.user.id)
+        self.assertEqual(ver_user.email, self.user.email)
 
     async def test_create_email_token(self):
         token = await auth_service.create_email_token(data={"sub": self.email})
@@ -71,10 +75,6 @@ class TestAuth(unittest.IsolatedAsyncioTestCase):
     async def test_get_password_from_token(self):
         password = await auth_service.get_password_from_token(self.password_token)
         self.assertEqual(password, self.password)
-
-    def test_get_user_token(self):
-        token = auth_service.get_user_token(self.refresh_token)
-        self.assertEqual(token, self.refresh_token)
 
     def test_update_password(self):
         self.session.commit.return_value = None

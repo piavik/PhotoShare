@@ -23,7 +23,7 @@ async def read_users_me(current_user: User = Depends(RoleChecker(allowed_roles=[
     Authentication required.
 
     Args:
-    - current_user (User, optional): current user. Defaults to Depends(RoleChecker(allowed_roles=["user"])).
+    - current_user (User, optional): current user.
 
     Returns:
     - [UserDb]: user object
@@ -38,10 +38,11 @@ async def update_avatar_user(file: UploadFile = File(),
     """
     **Update user's avatar on Gravatar service.**
     Authentication required.
+
     Args:
-    - file (UploadFile): Avatar picture file. Defaults to File().
-    - db (Session): database session. Defaults to Depends(get_db).
-    - current_user (UserModel): current user. Defaults to Depends(auth_service.get_current_user).
+    - file (UploadFile): Avatar picture file.
+    - db (Session, optional): database session. 
+    - current_user (UserModel, optional): current user.
 
     Returns:
     - [UserDb]: The user db object that has the avater changed
@@ -70,10 +71,10 @@ async def change_user_role(user_email: str, new_role: str,
     Minimal required role^ moderator
 
     Args:
-    - user_email (str): email of the user
-    - new_role (str): new role
-    - current_user (User, optional):current user. Defaults to Depends(RoleChecker(allowed_roles=["moder"])).
-    - db (Session, optional): database session. Defaults to Depends(get_db).
+    - user_email (str): email of the user.
+    - new_role (str): new role.
+    - current_user (User, optional):current user.
+    - db (Session, optional): database session.
 
     Raises:
     - HTTPException: 400 This role does not exist
@@ -104,9 +105,9 @@ async def change_password(body: UserPassword,
     **Change password**
 
     Args:
-    - body (UserPassword): UserPassword object
-    - current_user (User, optional): current user. Defaults to Depends(RoleChecker(allowed_roles=["user"])).
-    - db (Session, optional): database session. Defaults to Depends(get_db).
+    - body (UserPassword): UserPassword object.
+    - current_user (User, optional): current user.
+    - db (Session, optional): database session.
 
     Raises:
     - HTTPException: 401 Invalid password
@@ -128,10 +129,10 @@ async def forgot_password(body: UserNewPassword, background_tasks: BackgroundTas
     **Request reset password request endpoint**
 
     Args:
-    - body (UserNewPassword): UserNewPassword object
+    - body (UserNewPassword): Data to reset user password (email, new_password).
     - background_tasks (BackgroundTasks): async ring scheduler
-    - request (Request): request object
-    - db (Session, optional): database session. Defaults to Depends(get_db).
+    - request (Request): The request to send email.
+    - db (Session, optional): database session.
 
     Returns:
     - message: message
@@ -150,8 +151,8 @@ async def reset_password(token: str, db: Session = Depends(get_db)) -> dict:
     """AI is creating summary for reset_password
 
     Args:
-    - token (str): JWT access token
-    - db (Session, optional): database session. Defaults to Depends(get_db).
+    - token (str): The token that was sent via email to reset the password.
+    - db (Session, optional): database session.
 
     Raises:
     - HTTPException: 400 Verification error
@@ -176,8 +177,8 @@ async def ban_user(email: str, current_user: User = Depends(RoleChecker(['admin'
 
     Args:
     - email (str): email of the user to ban
-    - current_user (User, optional): current user. Defaults to Depends(RoleChecker(['admin'])).
-    - db (Session, optional): database session. Defaults to Depends(get_db).
+    - current_user (User, optional): current user.
+    - db (Session, optional): database session.
 
     Raises:
     - HTTPException: 400 Verification error
@@ -203,9 +204,9 @@ async def unban_user(email: str, _: User = Depends(RoleChecker(['admin'])), db: 
     Admin role required
 
     Args:
-    - email (str): email of the user to unban
-    - _ (User, optional): admin user. Defaults to Depends(RoleChecker(['admin'])).
-        db (Session, optional): database session. Defaults to Depends(get_db).
+    - email (str): email of the user to unban.
+    - _ (User, optional): admin user.
+        db (Session, optional): database session.
 
     Raises:
     - HTTPException: 400 Verification error

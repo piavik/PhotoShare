@@ -31,11 +31,11 @@ class Auth:
         Verify if plain_password corresponds to hashed_password
 
         Args:
-            plain_password (str): Plaintext password
-            hashed_password (bool): Password hash
+            plain_password (str): Plaintext password to verify.
+            hashed_password (bool): Hashed password from the database.
 
         Returns:
-            bool: Comparison result of provided hash and calculated hash
+            bool: True if the password is correct, False otherwise.
         """
         return self.pwd_context.verify(plain_password, hashed_password)
 
@@ -44,48 +44,43 @@ class Auth:
         Create hash for provided plaintext password
 
         Args:
-            password (str): plaintext password
+            password (str): plaintext password to hash.
 
         Returns:
-            str: Hash for provided plaintext password
+            str: Hash for provided plaintext password.
         """
         return self.pwd_context.hash(plain_password)
 
-    async def create_access_token(self, data: dict, expires_delta: Optional[float] = None) -> str:
+    async def create_access_token(self, data: dict, expires_delta: int = 15) -> str:
         """
         Create JWT access token
 
         Args:
             data (dict): Claims for JWT
-            expires_delta (Optional[float], optional): The number of seconds for JWT lifetime. Defaults to None.
+            expires_delta (int, optional): The number of minutes for JWT lifetime. Default value is 15 minutes.
 
         Returns:
             str:  Access token
         """
         to_encode = data.copy()
-        if expires_delta:
-            expire = datetime.utcnow() + timedelta(seconds=expires_delta)
-        else:
-            expire = datetime.utcnow() + timedelta(minutes=15)
+        expire = datetime.utcnow() + timedelta(minutes=expires_delta)
         to_encode.update({"iat": datetime.utcnow(), "exp": expire, "scope": "access_token"})
         token = jwt.encode(to_encode, self.SECRET_KEY, algorithm=self.ALGORITHM)
         return token
 
-    async def create_refresh_token(self, data: dict, expires_delta: Optional[float] = None) -> str:
+    async def create_refresh_token(self, data: dict, expires_delta: int = 7) -> str:
         """
-        Create JWT refresh token
+        Create a new refresh token
 
         Args:
             data (dict):  Claims for JWT
+            expires_delta (int, optional): Expiration time in days to access token. Default value is 7 days.
 
         Returns:
             str: Refresh token
         """
         to_encode = data.copy()
-        if expires_delta:
-            expire = datetime.utcnow() + timedelta(seconds=expires_delta)
-        else:
-            expire = datetime.utcnow() + timedelta(days=7)
+        expire = datetime.utcnow() + timedelta(days)
         to_encode.update({"iat": datetime.utcnow(), "exp": expire, "scope": "refresh_token"})
         token = jwt.encode(to_encode, self.SECRET_KEY, algorithm=self.ALGORITHM)
         return token
@@ -118,8 +113,8 @@ class Auth:
         Get authenticated user onject
 
         Args:
-            token (str): User's authorization token. Defaults to Depends(oauth2_scheme).
-            db (Session): Dependency injection for DB session. Defaults to Depends(get_db).
+            token (str): User's access token.
+            db (Session, optional): database session.
 
         Raises:
             credentials_exception: Custom HTTPException for 401 Unauthorized.
@@ -161,7 +156,7 @@ class Auth:
 
     async def create_email_token(self, data: dict, expires_delta: Optional[float] = None) -> str:
         """
-        Create token for email validation
+        Create an email token to send on email verification.
 
         Args:
             data (dict): Claims for JWT
@@ -196,7 +191,6 @@ class Auth:
             email = payload["sub"]
             return email
         except JWTError as e:
-            print(e)
             raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
                                 detail="Invalid token for email verification")
 
@@ -221,19 +215,19 @@ class Auth:
             raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
                                 detail="Invalid token for password reset")
 
-    def get_user_token(self, token: str = Depends(oauth2_scheme)):
-        """
-        **Get token for the user**
-
-        Args:
-            token (str, optional): [description]. Defaults to Depends(oauth2_scheme).
-
-        Returns:
-            [type]: [description]
-        """
-        return token
-
     def update_password(self, user: User, new_password: str, db: Session) -> str:
+        """
+        Update password to specified user.
+
+        :param user: The user to update password.
+        :type user: User
+        :param new_password: The new password.
+        :type new_password: str
+        :param db: The database session.
+        :type db: Session
+        :return: Message.
+        :rtype: str
+        """
         hashed_password = self.get_password_hash(new_password)
         user.password = hashed_password
         db.commit()

@@ -6,19 +6,29 @@ from app.src.schemas import UserModel
 
 
 async def get_user_by_email(email: str, db: Session) -> User | None:
+    """
+    Retrieves a user with the specified email.
+
+    Args:
+        email (str): The email of the user to retrieve.
+        db (Session, optional): database session.
+    Returns:
+        User | None: The user with the specified email, or None if it does not exist.
+
+    """
     return db.query(User).filter(User.email == email).first()
 
 
 async def create_user(body: UserModel, db: Session) -> User:
     """
-    **Create user**
+    Create a new user
 
     Args:
-        body (UserModel): [description]
-        db (Session): [description]
+        body (UserModel): The data for the user to create.
+        db (Session): database session.
 
     Returns:
-        [User]: [description]
+        [User]: he newly created user
     """    
     avatar = None
     try:
@@ -35,12 +45,12 @@ async def create_user(body: UserModel, db: Session) -> User:
 
 async def update_token(user: User, token: str | None, db: Session) -> None:
     """
-    **Update refresh token in the database**
+    Update refresh token in the database
 
     Args:
-        user (User): [description]
-        token (str): [description]
-        db (Session): [description]
+        user (User): The user to update the token for.
+        token (str): The token to update.
+        db (Session): The database session.
     """    
     user.refresh_token = token
     db.commit()
@@ -48,15 +58,15 @@ async def update_token(user: User, token: str | None, db: Session) -> None:
 
 async def update_avatar(email: str, url: str, db: Session) -> User:
     """
-    **Update avatar**
+    Update user's avatar
 
     Args:
-        email (str): [description]
-        url (str): [description]
-        db (Session): [description]
+        email (str):  Email of the specific user to update an avatar for.
+        url (str): The URL of the avatar picture.
+        db (Session): The database session.
 
     Returns:
-        [User]: [description]
+        [User]: Updated user.
     """    
     user = await get_user_by_email(email, db)
     user.avatar = url
@@ -66,11 +76,13 @@ async def update_avatar(email: str, url: str, db: Session) -> User:
 
 async def confirmed_email(email: str, db: Session) -> None:
     """
-    **Check email confirmation flag in the database**
+    Check email confirmation flag in the database
 
     Args:
-        email (str): [description]
-        db (Session): [description]
+        email (str): The email of the user to confirm.
+        db (Session): The email of the user to confirm.
+    Returns:
+        None
     """    
     user = await get_user_by_email(email, db)
     user.confirmed = True
@@ -81,15 +93,15 @@ async def confirmed_email(email: str, db: Session) -> None:
 
 def change_user_role(user: User, role: str, db: Session) -> User:
     """
-    **Change the role of the user**
+    Change the role of the user
 
     Args:
-        user (User): [description]
-        role (str): [description]
-        db (Session): [description]
+        user (User): The user to change role.
+        role (str): New role for user.
+        db (Session): The database session.
 
     Returns:
-        [User]: [description]
+        [User]: Updated user.
     """    
     user.role = role
     db.commit()
@@ -98,14 +110,14 @@ def change_user_role(user: User, role: str, db: Session) -> User:
 
 def ban_user(user: User, db: Session) -> str:
     """
-    **Set user ban flag in the database**
+    Set user ban flag in the database
 
     Args:
-        user (User): [description]
-        db (Session): [description]
+        user (User): The user to ban.
+        db (Session): The database session.
 
     Returns:
-        [str]: [description]
+        [str]: Message with the username of banned user.
     """    
     user.banned = True
     db.commit()
@@ -114,14 +126,14 @@ def ban_user(user: User, db: Session) -> str:
 
 def unban_user(user: User, db: Session) -> str:
     """
-    **Clear user ban flag in the database**
+    Clear user ban flag in the database
 
     Args:
-        user (User): [description]
-        db (Session): [description]
+        user (User): The user to unban.
+        db (Session): The database session.
 
     Returns:
-        str: [description]
+        str: Message with username of unbanned user.
     """    
     user.banned = False
     db.commit()

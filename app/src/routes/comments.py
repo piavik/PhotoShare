@@ -30,9 +30,9 @@ async def update_comment(
 
     Args:
     - comment_text (str): Text of the new comment
-    - photo_id (int): ID of the photo that is commented
-    - current_user (User, optional): current user object. Defaults to Depends(auth_service.get_current_user).
-    - db (Session, optional): database session. Defaults to Depends(get_db).
+    - photo_id (int): ID of the photo that is commented.
+    - current_user (User, optional): current user object.
+    - db (Session, optional): database session.
 
     Returns:
     - [CommentResponse]: comment responce object
@@ -70,7 +70,7 @@ async def delete_comment(
     - photo_id (int): ID of the photo
     - user_id (int): ID of the comment author
     - current_user (User, optional): current user object. Must be either "Moder" or "admin" role.
-    - db (Session, optional): database session. Defaults to Depends(get_db).
+    - db (Session, optional): database session.
 
     Raises:
     - HTTPException: 404 Comment does not exist

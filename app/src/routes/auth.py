@@ -27,7 +27,7 @@ async def signup(body: UserModel, background_tasks: BackgroundTasks, request: Re
     - body (UserModel): user info dictionary
     - background_tasks (BackgroundTasks): async ring scheduler
     - request (Request): request object
-    - db (Session, optional): database session. Defaults to Depends(get_db).
+    - db (Session, optional): database session.
 
     Raises:
     - HTTPException: 409 Account already exists
@@ -50,8 +50,8 @@ async def login(body: OAuth2PasswordRequestForm = Depends(), db: Session = Depen
     **User login endpoint**
 
     Args:
-    - body (OAuth2PasswordRequestForm, optional): authentication form. Defaults to Depends().
-    - db (Session, optional): database session. Defaults to Depends(get_db).
+    - body (OAuth2PasswordRequestForm, optional): authentication form.
+    - db (Session, optional): database session.
 
     Raises:
     - HTTPException: 401 Invalid email
@@ -80,8 +80,8 @@ async def refresh_token(credentials: HTTPAuthorizationCredentials = Security(sec
     **Refresh access tokens**
 
     Args:
-    - credentials (HTTPAuthorizationCredentials): current refresh token. Defaults to Security(security)
-    - db (Session): database session. Defaults to Depends(get_db)
+    - credentials (HTTPAuthorizationCredentials): current refresh token.
+    - db (Session): database session.
 
     Raises:
     - HTTPException: 401 Invalid refresh token
@@ -111,7 +111,7 @@ async def confirmed_email(token: str, db: Session = Depends(get_db)):
 
     Args:
     - token (str): access token
-    - db (Session, optional): database session. Defaults to Depends(get_db).
+    - db (Session, optional): database session.
 
     Raises:
     - HTTPException: 400 Verification error
@@ -139,7 +139,7 @@ async def request_email(body: RequestEmail, background_tasks: BackgroundTasks, r
     - body (RequestEmail): object with email request parameters
     - background_tasks (BackgroundTasks): async ring scheduler
     - request (Request): request object
-    - db (Session, optional): database session. Defaults to Depends(get_db).
+    - db (Session, optional): database session.
 
     Returns:
     - message: message
@@ -160,8 +160,8 @@ async def logout(token: str = Depends(auth_service.oauth2_scheme),
     **User logut endpoint**
 
     Args:
-    - token (str, optional): [description]. Defaults to Depends(auth_service.oauth2_scheme).
-    - _ (User, optional): User object. Defaults to Depends(RoleChecker(allowed_roles=["user"])).
+    - token (str, optional): The access token for the current user.
+    - _ (User, optional): Current user data.
 
     Returns:
     - message: message
