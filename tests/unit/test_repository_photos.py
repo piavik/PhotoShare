@@ -104,7 +104,7 @@ class TestPhotosUser(unittest.IsolatedAsyncioTestCase):
         user_id = self.user.id
         new_tags = "updated one two"
 
-        updated_photo = await edit_photo_tags(self.session, photo_id, user_id, new_tags)
+        updated_photo = await edit_photo_tags(self.session, photo_id, new_tags)
 
         self.assertIsNotNone(updated_photo)
         self.assertTrue(updated_photo.tags)
@@ -117,7 +117,7 @@ class TestPhotosUser(unittest.IsolatedAsyncioTestCase):
 
         self.session.query.return_value.filter.return_value.first.return_value = None
 
-        updated_photo = await edit_photo_tags(self.session, photo_id, user_id, new_tags)
+        updated_photo = await edit_photo_tags(self.session, photo_id, new_tags)
 
         self.assertIsNone(updated_photo)
 
@@ -126,7 +126,7 @@ class TestPhotosUser(unittest.IsolatedAsyncioTestCase):
         user_id = self.user.id
         new_tags = " "
 
-        updated_photo = await edit_photo_tags(self.session, photo_id, user_id, new_tags)
+        updated_photo = await edit_photo_tags(self.session, photo_id, new_tags)
 
         self.assertIsNone(updated_photo)
 
@@ -250,15 +250,15 @@ class TestPhotosUser(unittest.IsolatedAsyncioTestCase):
         self.assertIsNone(result)
 
     async def test_delete_photo_ok(self):
-        result = await delete_photo(self.session, self.mock_photo.id, self.user.id)
+        result = await delete_photo(self.session, self.mock_photo.id,)
 
         self.assertTrue(result)
 
     async def test_delete_photo_photo_not_found(self):
         self.session.query().filter().first.return_value = None
-        result = await delete_photo(self.session, self.mock_photo.id, self.user.id)
+        result = await delete_photo(self.session, self.mock_photo.id,)
 
-        self.assertIsNone(result)
+        self.assertFalse(result)
 
 
 class TestFindPhotos(unittest.IsolatedAsyncioTestCase):
