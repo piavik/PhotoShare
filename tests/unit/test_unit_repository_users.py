@@ -72,13 +72,13 @@ class TestUserRepository(unittest.IsolatedAsyncioTestCase):
 
     def test_ban_user(self):
         self.session.commit.return_value = None
-        ban_user(user=self.user, db=self.session)
+        ban_user(user=self.user, banned=True, db=self.session)
         self.assertEqual(self.user.banned,  True)
 
     def test_unban_user(self):
         self.user.banned = True
         self.session.commit.return_value = None
-        unban_user(user=self.user, db=self.session)
+        unban_user(user=self.user, banned=False, db=self.session)
         self.assertEqual(self.user.banned,  False)
 
 

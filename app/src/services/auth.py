@@ -219,14 +219,13 @@ class Auth:
         """
         Update password to specified user.
 
-        :param user: The user to update password.
-        :type user: User
-        :param new_password: The new password.
-        :type new_password: str
-        :param db: The database session.
-        :type db: Session
-        :return: Message.
-        :rtype: str
+        Args:
+            user (User): The user to update password.
+            new_password (str): The new password.
+            db (Session): The database session.
+
+        Returns:
+            str: message
         """
         hashed_password = self.get_password_hash(new_password)
         user.password = hashed_password
@@ -242,11 +241,23 @@ class RoleChecker:
         self.allowed_roles = allowed_roles
 
     def __call__(self, user: Annotated[UserDb, Depends(auth_service.get_current_user)]):
+        """
+        Check if current user's role corresponds to the role in "allowed_roles" parameter
+
+        Args:
+            user (Annotated[UserDb, Depends): current user
+
+        Raises:
+            HTTPException: 403 Unsufficient permissions
+
+        Returns:
+            [type]: [description]
+        """        
         if ["moder"] == self.allowed_roles:
             self.allowed_roles = ("admin", "moder")
         elif ["user"] == self.allowed_roles:
             self.allowed_roles = ("admin", "moder", "user")
         if user.role in self.allowed_roles:
             return user
-        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="You don't have enough permissions")
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Unsufficient permissions")
 

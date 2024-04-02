@@ -13,10 +13,14 @@ from app.src.schemas import (
     ResponceOptions,
     UrlResponse,
     TagModel,
+    CommentModel,
+    CommentDb,
+    CommentResponse
 )
 from app.src.database.db import get_db
-from app.src.database.models import User, Photo
+from app.src.database.models import User, Photo, Comment
 from app.src.repository import photos as repository_photos
+from app.src.repository import comments as repository_comments
 from app.src.services.auth import auth_service, RoleChecker
 from app.src.services.qr_code_service import generate_qr_code
 from app.src.services import cloudinary_services
@@ -388,3 +392,72 @@ async def transform_photo(
     img_io = generate_qr_code(transformed_photo_url)
 
     return StreamingResponse(img_io, media_type="image/png")
+
+
+@router.post("/{photo_id}/comment", response_model=CommentResponse, status_code=status.HTTP_201_CREATED)
+async def update_comment(
+        comment_text: str,
+        photo_id: int,
+        current_user: User = Depends(auth_service.get_current_user),
+        db: Session = Depends(get_db)
+    ):
+    """
+    **Endpoint for creating or updating comment to the photo**
+
+    Args:
+    - comment_text (str): Text of the new comment
+    - photo_id (int): ID of the photo that is commented.
+    - current_user (User, optional): current user object.
+    - db (Session, optional): database session.
+
+    Returns:
+    - [CommentResponse]: comment responce object
+    """
+    comment_to_update = CommentModel(
+        text     = comment_text,
+        photo_id = photo_id,
+        user_id  = current_user.id
+    )
+
+    new_comment = await repository_comments.update_comment(comment_to_update, db)
+
+    comment_response = CommentResponse(
+        comment = CommentDb(
+            id       = new_comment.id,
+            text     = comment_text,
+            photo_id = photo_id,
+            user_id  = current_user.id
+        ),
+        detail = "Comment updated"
+
+    )
+    return comment_response
+
+@router.delete("/{photo_id}/comment", status_code=status.HTTP_200_OK)
+async def delete_comment(
+        photo_id: int,
+        comment_id: int,
+        current_user: User = Depends(RoleChecker(allowed_roles=["moder"])),
+        db: Session = Depends(get_db)
+    ):
+    """
+    **Endpoint for deleting the comment**
+
+    Args:
+    - photo_id (int): ID of the photo
+    - comment_id (int): ID of the comment
+    - current_user (User, optional): current user object. Must be either "Moder" or "admin" role.
+    - db (Session, optional): database session.
+
+    Raises:
+    - HTTPException: 404 Comment does not exist
+
+    Returns:
+    - message: message
+    """
+    result = await repository_comments.delete_comment(comment_id, photo_id, db)
+
+    if not result:
+         raise HTTPException(status_code=404, detail="Comment does not exist")
+
+    return { "detail": "Comment deleted" }

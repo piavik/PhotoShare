@@ -6,7 +6,7 @@ from fastapi_limiter import FastAPILimiter
 from fastapi.middleware.cors import CORSMiddleware
 from contextlib import asynccontextmanager
 
-from app.src.routes import auth, users, photos, comments
+from app.src.routes import auth, users, photos
 from app.src.conf.config import settings
 
 @asynccontextmanager
@@ -26,7 +26,6 @@ app = FastAPI(lifespan=lifespan)
 app.include_router(auth.router, prefix="/api")
 app.include_router(users.router, prefix='/api')
 app.include_router(photos.router, prefix="/api")
-app.include_router(comments.router, prefix="/api")
 
 cors_origins = [ 
     "*"

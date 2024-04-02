@@ -1,8 +1,24 @@
+from operator import not_
 from libgravatar import Gravatar
 from sqlalchemy.orm import Session
 
 from app.src.database.models import User
-from app.src.schemas import UserModel
+from app.src.schemas import UserModel, RoleOptions
+
+
+async def get_user_by_id(user_id: int, db: Session):
+    """
+    Retrieves a user with the specified id.
+
+    Args:
+        photo_id (int): id of the user to retrieve.
+        db (Session): database session
+
+    Returns:
+        User or None: The user with the specified email, or None if it does not exist.
+    """
+    return db.query(User).filter(User.id == user_id).first()
+
 
 
 async def get_user_by_email(email: str, db: Session) -> User | None:
@@ -91,13 +107,13 @@ async def confirmed_email(email: str, db: Session) -> None:
     db.commit()
 
 
-def change_user_role(user: User, role: str, db: Session) -> User:
+async def change_user_role(user: User, role: RoleOptions, db: Session) -> User:
     """
     Change the role of the user
 
     Args:
         user (User): The user to change role.
-        role (str): New role for user.
+        role (RoleOptions): New role for user.
         db (Session): The database session.
 
     Returns:
@@ -108,33 +124,18 @@ def change_user_role(user: User, role: str, db: Session) -> User:
     return user
 
 
-def ban_user(user: User, db: Session) -> str:
+async def ban_user(user: User, banned: bool, db: Session) -> str:
     """
     Set user ban flag in the database
 
     Args:
         user (User): The user to ban.
+        banned (bool): True = banned, False = unbanned
         db (Session): The database session.
 
     Returns:
         [str]: Message with the username of banned user.
     """    
-    user.banned = True
+    user.banned = banned
     db.commit()
-    return f"{user.username} has been banned"
-
-
-def unban_user(user: User, db: Session) -> str:
-    """
-    Clear user ban flag in the database
-
-    Args:
-        user (User): The user to unban.
-        db (Session): The database session.
-
-    Returns:
-        str: Message with username of unbanned user.
-    """    
-    user.banned = False
-    db.commit()
-    return f"{user.username} has been unbanned"
+    return f'User {user.username} has been {"un"*not_(banned)}banned'
