@@ -49,7 +49,7 @@ class Photo(BaseTable):
 class User(BaseTable):
     __tablename__ = 'users'
     id: Mapped[int] = mapped_column(primary_key=True)
-    username: Mapped[String] = mapped_column(String(50))
+    username: Mapped[String] = mapped_column(String(50), unique=True)
     email: Mapped[String] = mapped_column(String(100), nullable=False, unique=True)
     password: Mapped[String] = mapped_column(String(100), nullable=False)
     role: Mapped[String] = mapped_column(String(20), nullable=False, default="user")

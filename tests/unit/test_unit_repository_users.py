@@ -10,7 +10,7 @@ sys.path.append(os.path.abspath('..'))
 from sqlalchemy.orm import Session
 
 from app.src.database.models import User
-from app.src.schemas import UserModel
+from app.src.schemas import UserModel, RoleOptions
 from app.src.repository.users import (
     get_user_by_email,
     create_user,
@@ -19,29 +19,33 @@ from app.src.repository.users import (
     confirmed_email,
     change_user_role,
     ban_user,
-    unban_user)
+    get_user_by_username,
+    change_user_username,
+    change_user_email,
+    get_users_photos,
+    get_users_comments)
 
 
 class TestUserRepository(unittest.IsolatedAsyncioTestCase):
     def setUp(self):
         self.session = MagicMock(spec=Session)
-        self.user = User(id=1, role='user', banned = False)
+        self.user = User(id=1, username="test_username", role=RoleOptions.user, banned=False)
         self.refresh_token = 'refresh_token'
         self.email = "test_email@gmail.com"
 
     async def test_get_user_by_email_found(self):
-        user = User(email="0953226763r@gmail.com")
+        user = User(email="test_email@gmail.com")
         self.session.query().filter().first.return_value = user
-        result = await get_user_by_email(email="0953226763r@gmail.com", db=self.session)
+        result = await get_user_by_email(email="test_email@gmail.com", db=self.session)
         self.assertEqual(result, user)
 
     async def test_get_user_by_email_not_found(self):
         self.session.query().filter().first.return_value = None
-        result = await get_user_by_email(email="0953226763r@gmail.com", db=self.session)
+        result = await get_user_by_email(email="test_email@gmail.com", db=self.session)
         self.assertIsNone(result)
 
     async def test_create_user(self):
-        body = UserModel(username="<NAME>", email="0953226763r@gmail.com", password="<PASSWORD>")
+        body = UserModel(username="<NAME>", email="test_email@gmail.com", password="<PASSWORD>")
         result = await create_user(body=body, db=self.session)
         self.assertEqual(body.username, result.username)
         self.assertEqual(body.email, result.email)
@@ -51,7 +55,7 @@ class TestUserRepository(unittest.IsolatedAsyncioTestCase):
     async def test_update_avatar(self):
         user = User(avatar="avatar.com")
         self.session.query().filter().first.return_value = user
-        result = await update_avatar(email="0953226763r@gmail.com", url="avatar.com", db=self.session)
+        result = await update_avatar(email="test_email@gmail.com", url="avatar.com", db=self.session)
         self.assertEqual(result, user)
 
     async def test_update_token(self):
@@ -65,21 +69,48 @@ class TestUserRepository(unittest.IsolatedAsyncioTestCase):
         await confirmed_email(email=self.email, db=self.session)
         self.assertEqual(user.confirmed, True)
 
-    def test_change_user_role(self):
+    async def test_change_user_role(self):
         self.session.commit.return_value = None
-        result = change_user_role(user=self.user, role="admin", db=self.session)
+        result = await change_user_role(user=self.user, role=RoleOptions.admin, db=self.session)
         self.assertEqual(result.role, "admin")
 
-    def test_ban_user(self):
-        self.session.commit.return_value = None
-        ban_user(user=self.user, banned=True, db=self.session)
+    async def test_ban_user(self):
+        self.session.commit.return_value = self.user.banned = True
+        await ban_user(user=self.user, banned=True, db=self.session)
         self.assertEqual(self.user.banned,  True)
 
-    def test_unban_user(self):
-        self.user.banned = True
+    async def test_get_user_by_username_found(self):
+        user = User(username="test_username")
+        self.session.query().filter().first.return_value = user
+        result = await get_user_by_username(username="test_username", db=self.session)
+        self.assertEqual(result, user)
+
+    async def test_get_user_by_username_not_found(self):
+        self.session.query().filter().first.return_value = None
+        result = await get_user_by_username(username="test_username", db=self.session)
+        self.assertIsNone(result)
+
+    async def test_change_user_username(self):
         self.session.commit.return_value = None
-        unban_user(user=self.user, banned=False, db=self.session)
-        self.assertEqual(self.user.banned,  False)
+        result = await change_user_username(user=self.user, username="changed_username", db=self.session)
+        self.assertEqual(result.username, "changed_username")
+
+    async def test_change_user_email(self):
+        self.session.commit.return_value = None
+        result = await change_user_email(user=self.user, email="changed_email@gmail.com", db=self.session)
+        self.assertEqual(result.email, "changed_email@gmail.com")
+
+    def test_get_users_photos(self):
+        check_list = ["photo1", "photo2", "photo3", "photo4"]
+        self.session.query().filter().all.return_value = check_list
+        result = get_users_photos(user=self.user, db=self.session)
+        self.assertEqual(result, check_list)
+
+    def test_get_users_comments(self):
+        check_list = ["comment1", "comment2", "comment3"]
+        self.session.query().filter().all.return_value = check_list
+        result = get_users_comments(user=self.user, db=self.session)
+        self.assertEqual(result, check_list)
 
 
 if __name__ == '__main__':
