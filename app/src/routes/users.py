@@ -172,7 +172,7 @@ async def change_user_role(user_id: int,
 
 @router.patch('/{user_id}/ban')
 async def ban_unban_user(user_id: int, 
-                        ban: bool,
+                        banned: bool,
                         current_user: User = Depends(RoleChecker(['admin'])),
                         db: Session = Depends(get_db)
                         ) -> dict:
@@ -182,7 +182,7 @@ async def ban_unban_user(user_id: int,
 
     Args:
     - email (str): email of the user to ban
-    - ban (bool): True = ban, False = unban
+    - banned (bool): True = banned, False = unbanned
     - current_user (User, optional): current user.
     - db (Session, optional): database session.
 
@@ -201,6 +201,6 @@ async def ban_unban_user(user_id: int,
     if user is None:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Verification error")
     red.delete(f"user:{user.email}")
-    message = await repository_users.ban_user(user, ban, db)
+    message = await repository_users.ban_user(user, banned, db)
     return {"message": message}
 

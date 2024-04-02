@@ -124,18 +124,18 @@ async def change_user_role(user: User, role: RoleOptions, db: Session) -> User:
     return user
 
 
-async def ban_user(user: User, ban: bool, db: Session) -> str:
+async def ban_user(user: User, banned: bool, db: Session) -> str:
     """
     Set user ban flag in the database
 
     Args:
         user (User): The user to ban.
-        ban (bool): True = ban, False = unban
+        banned (bool): True = banned, False = unbanned
         db (Session): The database session.
 
     Returns:
         [str]: Message with the username of banned user.
     """    
-    user.banned = ban
+    user.banned = banned
     db.commit()
-    return f'User {user.username} has been {"un"*not_(ban)}banned'
+    return f'User {user.username} has been {"un"*not_(banned)}banned'
