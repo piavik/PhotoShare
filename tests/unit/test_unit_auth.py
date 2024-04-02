@@ -20,8 +20,8 @@ class TestAuth(unittest.IsolatedAsyncioTestCase):
         self.email = "test_email@gmail.com"
         self.password = "password"
         self.hash_password = "$2b$12$PKsdFbF1Ob/DVhKazhTtLOHReegI/kOfPFZCedSaHQKX6AyNye1bO"
-        self.access_token = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJ0ZXN0X2VtYWlsQGdtYWlsLmNvbSIsImlhdCI6MTcxMTg3OTgwNywiZXhwIjoxNzExODgwMzA3LCJzY29wZSI6ImFjY2Vzc190b2tlbiJ9.JfvXZveuqyasg3nTELQl9LnKUf7aRWWWymgaG-ahagk"
-        self.refresh_token ="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJ0ZXN0X2VtYWlsQGdtYWlsLmNvbSIsImlhdCI6MTcxMTcyMzExNywiZXhwIjoxNzEyMzI3OTE3LCJzY29wZSI6InJlZnJlc2hfdG9rZW4ifQ.LQL501KbWQZEW7P365TxAJ1D52SG_GiSx8pfPGp6UzU"
+        self.access_token = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJ0ZXN0X2VtYWlsQGdtYWlsLmNvbSIsImlhdCI6MTcxMjA1NjE0MSwiZXhwIjoxODg0ODU2MTQxLCJzY29wZSI6ImFjY2Vzc190b2tlbiJ9.Un0rkbW4jFthpARZKlIldNxEy7YrzCoxjhvvwNs6ayc"
+        self.refresh_token ="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJ0ZXN0X2VtYWlsQGdtYWlsLmNvbSIsImlhdCI6MTcxMjA1NjIxNCwiZXhwIjoxODg0ODU2MjE0LCJzY29wZSI6InJlZnJlc2hfdG9rZW4ifQ.Hza4jXo7_TFfRAfcVA5H4KKDP3Pl-5woSQ-xP9JXDCA"
         self.password_token = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJ0ZXN0X2VtYWlsQGdtYWlsLmNvbSIsInBhc3MiOiJwYXNzd29yZCIsImlhdCI6MTcxMTczMzg1NCwiZXhwIjoxNzEyMzM4NjU0LCJzY29wZSI6InJlZnJlc2hfdG9rZW4ifQ.h0BeHSGFmphCvm8DAD5DWc7VX96GI5bypsSYY6tx418"
 
     def test_verify_password_correct(self):

@@ -1,3 +1,4 @@
+import cloudinary
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
@@ -10,6 +11,7 @@ class Settings(BaseSettings):
     mail_from: str
     mail_port: int
     mail_server: str
+    mail_from_name: str
     redis_host: str
     redis_port: int = "6380"
     cloudinary_name: str
@@ -19,3 +21,11 @@ class Settings(BaseSettings):
 
 
 settings = Settings()
+
+
+cloudinary_config = cloudinary.config(
+        cloud_name=settings.cloudinary_name,
+        api_key=settings.cloudinary_api_key,
+        api_secret=settings.cloudinary_api_secret,
+        secure=True
+    )

@@ -2,23 +2,20 @@ from operator import not_
 from libgravatar import Gravatar
 from sqlalchemy.orm import Session
 
-from app.src.database.models import User
+from app.src.database.models import User, Photo, Comment
 from app.src.schemas import UserModel, RoleOptions
 
 
-async def get_user_by_id(user_id: int, db: Session):
+async def get_user_by_id(user_id: int, db: Session) -> User | None:
     """
     Retrieves a user with the specified id.
-
     Args:
         photo_id (int): id of the user to retrieve.
         db (Session): database session
-
     Returns:
         User or None: The user with the specified email, or None if it does not exist.
     """
     return db.query(User).filter(User.id == user_id).first()
-
 
 
 async def get_user_by_email(email: str, db: Session) -> User | None:
@@ -33,6 +30,20 @@ async def get_user_by_email(email: str, db: Session) -> User | None:
 
     """
     return db.query(User).filter(User.email == email).first()
+
+
+async def get_user_by_username(username: str, db: Session) -> User | None:
+    """
+    Retrieves a user with the specified username.
+
+    Args:
+        username (str): The username of the user to retrieve.
+        db (Session, optional): database session.
+    Returns:
+        User | None: The user with the specified username, or None if it does not exist.
+
+    """
+    return db.query(User).filter(User.username == username).first()
 
 
 async def create_user(body: UserModel, db: Session) -> User:
@@ -139,3 +150,66 @@ async def ban_user(user: User, banned: bool, db: Session) -> str:
     user.banned = banned
     db.commit()
     return f'User {user.username} has been {"un"*not_(banned)}banned'
+
+
+async def change_user_username(user: User, username: str, db: Session) -> User:
+    """
+    Change the username of the user
+
+    Args:
+        user (User): The user to change username.
+        username (str): New username for user.
+        db (Session): The database session.
+
+    Returns:
+        [User]: Updated user.
+    """
+    user.username = username
+    db.commit()
+    return user
+
+
+async def change_user_email(user: User, email: str, db: Session) -> User:
+    """
+    Change the email of the user
+
+    Args:
+        user (User): The user to change email.
+        email (str): New email for user.
+        db (Session): The database session.
+
+    Returns:
+        [User]: Updated user.
+    """
+    user.email = email
+    user.confirmed = False
+    db.commit()
+    return user
+
+
+def get_users_photos(user: User, db: Session) -> list:
+    """
+    Get list of user's photos.
+
+    Args:
+        user (User): The user to get photos.
+        db (Session): The database session.
+
+    Returns:
+        [list]: User's photos list.
+    """
+    return db.query(Photo).filter(Photo.owner_id == user.id).all()
+
+
+def get_users_comments(user: User, db: Session) -> list:
+    """
+    Get list of user's comments.
+
+    Args:
+        user (User): The user to get comments.
+        db (Session): The database session.
+
+    Returns:
+        [list]: User's comments list.
+    """
+    return db.query(Comment).filter(Comment.user_id == user.id).all()
