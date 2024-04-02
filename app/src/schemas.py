@@ -110,6 +110,7 @@ class CommentModel(BaseModel):
 
 
 class CommentDb(BaseModel):
+    id: int
     text: str
     photo_id: int
     user_id: int
