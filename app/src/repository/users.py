@@ -6,6 +6,18 @@ from app.src.database.models import User, Photo, Comment
 from app.src.schemas import UserModel, RoleOptions
 
 
+async def get_user_by_id(user_id: int, db: Session) -> User | None:
+    """
+    Retrieves a user with the specified id.
+    Args:
+        photo_id (int): id of the user to retrieve.
+        db (Session): database session
+    Returns:
+        User or None: The user with the specified email, or None if it does not exist.
+    """
+    return db.query(User).filter(User.id == user_id).first()
+
+
 async def get_user_by_email(email: str, db: Session) -> User | None:
     """
     Retrieves a user with the specified email.
