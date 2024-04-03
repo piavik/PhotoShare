@@ -93,9 +93,8 @@ async def delete_rate(rate_id: int, db: Session):
 
     if not average_rating:
         photo.rating = 0.0
-        db.commit()
+    else:
+        photo.rating = average_rating
 
-    photo.rating = average_rating
     db.commit()
-
     return True
