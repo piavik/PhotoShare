@@ -37,7 +37,7 @@ class TestRateUser(unittest.IsolatedAsyncioTestCase):
 
     async def test_rate_photo_ok(self):
 
-        self.session.query().filter().first.return_value = self.photo
+        self.session.query().filter().first.side_effect = [None, self.photo]
 
         new_rate = await rate_photo(self.session, self.user_id, self.photo_id, self.rate_value)
 
@@ -62,7 +62,7 @@ class TestRateUser(unittest.IsolatedAsyncioTestCase):
         )
 
     async def test_rate_photo_rate_exist(self):
-        self.session.query().join().join().filter().first.return_value = MagicMock(spec=Rate)
+        self.session.query().filter().first.return_value = MagicMock(spec=Rate)
         result = await rate_photo(self.session, self.user_id, self.photo_id, self.rate_value)
         self.assertIsNone(result)
 

@@ -474,7 +474,7 @@ async def rate_photo(
     rate: RatingOptions = Query(description="Select a rate for photo"),
     current_user: User = Depends(auth_service.get_current_user),
     db: Session = Depends(get_db),
-):
+    ):
     """
     **Endpoint for rating a photo**
 

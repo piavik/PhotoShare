@@ -20,8 +20,6 @@ async def rate_photo(db: Session, user_id: int, photo_id: int, rate: int):
 
     existing_rate = (
         db.query(Rate)
-        .join(Photo, Rate.photo_id == Photo.id)
-        .join(User, Rate.user_id == User.id)
         .filter(Rate.photo_id == photo_id, Rate.user_id == user_id)
         .first()
     )
