@@ -13,7 +13,7 @@ from app.src.schemas import UserDb, UserPassword, UserNewPassword, RoleOptions
 from app.src.services.email import send_password_email, send_email
 
 router = APIRouter(prefix="/users", tags=["users"])
-red = redis.Redis(host=settings.redis_host, port=settings.redis_port, db=0)
+red = redis.Redis(host=settings.redis_host, port=settings.redis_port, username=settings.redis_user, password=settings.redis_pass, db=0)
 
 
 @router.get("/me")
