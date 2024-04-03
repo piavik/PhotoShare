@@ -1,5 +1,5 @@
 import unittest
-from unittest.mock import MagicMock, AsyncMock
+from unittest.mock import MagicMock
 from sqlalchemy.orm import Session
 from datetime import date
 
@@ -15,7 +15,7 @@ from app.src.repository.rating import (
     get_rates, 
     delete_rate
 )
-from app.src.database.models import User, Photo, Tag, Rate
+from app.src.database.models import User, Photo, Rate
 
 class TestRateUser(unittest.IsolatedAsyncioTestCase):
     def setUp(self):
