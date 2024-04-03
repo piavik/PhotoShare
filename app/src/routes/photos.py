@@ -2,6 +2,7 @@ from fastapi import APIRouter, Depends, UploadFile, File, Form, status, HTTPExce
 from fastapi.responses import StreamingResponse
 from sqlalchemy.orm import Session
 from typing import Optional, List, Union
+from pydantic import ValidationError
 from datetime import date
 
 from app.src.schemas import (
@@ -15,12 +16,16 @@ from app.src.schemas import (
     TagModel,
     CommentModel,
     CommentDb,
-    CommentResponse
+    CommentResponse,
+    RateDb,
+    RatingOptions, 
+    RateResponse, 
 )
 from app.src.database.db import get_db
 from app.src.database.models import User, Photo, Comment
 from app.src.repository import photos as repository_photos
 from app.src.repository import comments as repository_comments
+from app.src.repository import rating as repository_rating
 from app.src.services.auth import auth_service, RoleChecker
 from app.src.services.qr_code_service import generate_qr_code
 from app.src.services import cloudinary_services
@@ -461,3 +466,102 @@ async def delete_comment(
          raise HTTPException(status_code=404, detail="Comment does not exist")
 
     return { "detail": "Comment deleted" }
+
+
+@router.post("/{photo_id}/rate", response_model=RateResponse, status_code=status.HTTP_200_OK)
+async def rate_photo(
+    photo_id: int,
+    rate: RatingOptions = Query(description="Select a rate for photo"),
+    current_user: User = Depends(auth_service.get_current_user),
+    db: Session = Depends(get_db),
+):
+    """
+    **Endpoint for rating a photo**
+
+    Args:
+    - photo_id (int): ID of the photo
+    - rate (RatingOptions, optional): rating options in range from 1 to 5.
+    - current_user (User, optional): current user object.
+    - db (Session, optional): database session.
+
+    Raises:
+    - HTTPException: 404 Photo not found
+    - HTTPException: 409 You can not rate your own photo
+    - HTTPException: 409 You've already rated this photo
+
+    Returns:
+    - [RateResponse]: Rate response object.
+    """
+    photo_to_rate = await repository_photos.get_photo_by_id(db, photo_id)
+
+    if not photo_to_rate:
+        raise HTTPException(status_code=404, detail="Photo not found")
+
+    if current_user.id == photo_to_rate.owner_id:
+        raise HTTPException(status_code=409, detail="You can not rate your own photo")
+
+    new_rate_result = await repository_rating.rate_photo(
+        db, current_user.id, photo_id, rate.value
+    )
+
+    if not new_rate_result:
+        raise HTTPException(status_code=409, detail="You've already rated this photo")
+
+    rate_response = RateResponse(rate=RateDb(id = new_rate_result.id, rate = rate, photo_id=photo_id, user_id=current_user.id))
+    return rate_response
+
+
+@router.get("/{photo_id}/rate",response_model=list[RateDb], status_code=status.HTTP_200_OK)
+async def read_rate(
+    photo_id: int,
+    current_user: User = Depends(RoleChecker(allowed_roles=["moder"])),
+    db: Session = Depends(get_db),
+):
+    """
+    **Endpoint for reading rates**
+
+    Args:
+    - photo_id (int): ID of the photo
+    - current_user (User, optional): current user object. Must be either "moder" or "admin" role.
+    - db (Session, optional): database session.
+
+    Raises:
+    - HTTPException: 404 Rate does not exist
+
+    Returns:
+    - message: message
+    """
+    result = await repository_rating.get_rates(photo_id, db)
+
+    if not result:
+        raise HTTPException(status_code=404, detail="Rates do not exist")
+
+    return result
+
+
+@router.delete("/{photo_id}/rate", status_code=status.HTTP_200_OK)
+async def delete_rate(
+    rate_id: int,
+    current_user: User = Depends(RoleChecker(allowed_roles=["moder"])),
+    db: Session = Depends(get_db),
+):
+    """
+    **Endpoint for deleting the rate**
+
+    Args:
+    - rate_id (int): ID of the rate to be deleted
+    - current_user (User, optional): current user object. Must be either "moder" or "admin" role.
+    - db (Session, optional): database session.
+
+    Raises:
+    - HTTPException: 404 Rate does not exist
+
+    Returns:
+    - message: message
+    """
+    result = await repository_rating.delete_rate(rate_id, db)
+
+    if not result:
+        raise HTTPException(status_code=404, detail="Rate does not exist")
+
+    return {"detail": "Rate deleted"}
