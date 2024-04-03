@@ -119,3 +119,29 @@ class CommentDb(BaseModel):
 class CommentResponse(BaseModel):
     comment: CommentDb
     message: str = "Comment updated"
+
+
+class RateDb(BaseModel):
+    id: int
+    rate: int
+    photo_id: int
+    user_id: int
+
+
+class RateModel(BaseModel):
+    rate: int = Field(min_value=1, max_value=5,)
+    photo_id: int
+    user_id: int
+
+
+class RateResponse(BaseModel):
+    rate: RateDb
+    message: str = "Photo's rating updated"
+
+
+class RatingOptions(int, Enum):
+    one = 1
+    two = 2
+    three = 3
+    four = 4
+    five = 5
