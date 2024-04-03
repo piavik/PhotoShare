@@ -89,8 +89,12 @@ async def delete_rate(rate_id: int, db: Session):
     db.commit()
 
     average_rating = db.query(func.avg(Rate.rate)).filter_by(photo_id=photo_id).scalar()
-
     photo = db.query(Photo).filter(Photo.id == photo_id).first()
+
+    if not average_rating:
+        photo.rating = 0.0
+        db.commit()
+
     photo.rating = average_rating
     db.commit()
 
