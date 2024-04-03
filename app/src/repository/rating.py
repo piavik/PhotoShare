@@ -1,6 +1,5 @@
 from sqlalchemy.orm import Session
 from sqlalchemy import func
-from app.src.schemas import RateDb
 from app.src.database.models import User, Photo, Rate
 
 
