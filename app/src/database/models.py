@@ -57,3 +57,11 @@ class User(BaseTable):
     confirmed: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
     avatar: Mapped[String] = mapped_column(String(255), nullable=True)
     banned: Mapped[bool] = mapped_column(Boolean, default=False)
+
+
+class Rate(BaseTable):
+    __tablename__ = "rates"
+    id: Mapped[int] = mapped_column(primary_key=True)
+    rate: Mapped[int] = mapped_column(nullable=False)
+    photo_id: Mapped[int] = mapped_column(ForeignKey("photos.id"))
+    user_id: Mapped[int] = mapped_column(ForeignKey("users.id"))
