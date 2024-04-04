@@ -42,7 +42,7 @@ async def create_photo(
         db: Session = Depends(get_db),
     ):
     """
-    **Create photo endpoint**
+    **Create photo endpoint**\n
     Uploads photo into cloudinaty and create a new record in database.
 
     Args:
@@ -184,7 +184,7 @@ async def read_photo(
         response_type: ResponceOptions = Query(default=ResponceOptions.detailed, description="Select a response option")
     ):
     """
-    **Endpoint for getting photo by it's ID**
+    **Endpoint for getting photo by it's ID**\n
     Retrieves photo information by ID with various response formats based on user selection.
 
     Args:
@@ -217,7 +217,7 @@ async def update_photo_tags(
         db: Session = Depends(get_db),
     ):
     """
-    **Endpoint for editing tags of the photo**
+    **Endpoint for editing tags of the photo**\n
     Updates tags of the photo found by provided id, if valid new tags provided
 
     Args:
@@ -263,11 +263,11 @@ async def update_photo_tags(
 async def update_description(
         photo_id: int,
         description: str = Form(...),
-        current_user: User = Depends(RoleChecker(allowed_roles=["user"])),
+        current_user: User = Depends(auth_service.get_current_user),
         db: Session = Depends(get_db),
     ):
     """
-    **Endpoint for updating the description of the photo**
+    **Endpoint for updating the description of the photo**\n
     Updates description of the photo found by provided id, if valid new tags provided
 
     Args:
@@ -331,7 +331,7 @@ async def transform_photo(
         db: Session = Depends(get_db),
     ):
     """
-    **Photo transformation endpoint**
+    **Photo transformation endpoint**\n
     Transforms photo using cloudinary transformation services, returning qr with transformed photo url
    
 
@@ -442,7 +442,7 @@ async def update_my_comment(
         db: Session = Depends(get_db)
     ):
     """
-    **Endpoint for creating or updating comment to the photo**
+    **Endpoint for creating and/or updating comment to the photo**
 
     Args:
     - comment_text (str): Text of the new comment
@@ -498,7 +498,7 @@ async def update_my_comment(
     return comment_response
 
 
-@router.post("/{photo_id}/comment/{comment_id}", response_model=CommentResponse, status_code=status.HTTP_201_CREATED)
+@router.patch("/{photo_id}/comment/{comment_id}", response_model=CommentResponse, status_code=status.HTTP_201_CREATED)
 async def update_comment(
         photo_id: int,
         comment_id: int,
@@ -507,7 +507,8 @@ async def update_comment(
         db: Session = Depends(get_db)
     ):
     """
-    **Endpoint for creating or updating comment to the photo**
+    **Endpoint for updating other user's comment to the photo**\n
+    Available for admins and moderator roles only.
 
     Args:
     - comment_text (str): Text of the new comment
@@ -556,7 +557,8 @@ async def delete_comment(
         db: Session = Depends(get_db)
     ):
     """
-    **Endpoint for deleting the comment**
+    **Endpoint for deleting the comment**\n
+    Available for admin and moderator roles only.
 
     Args:
     - photo_id (int): ID of the photo
@@ -586,10 +588,10 @@ async def delete_comment(
 
 @router.post("/{photo_id}/rate", response_model=RateResponse, status_code=status.HTTP_200_OK)
 async def rate_photo(
-    photo_id: int,
-    rate: RatingOptions = Query(description="Select a rate for photo"),
-    current_user: User = Depends(auth_service.get_current_user),
-    db: Session = Depends(get_db),
+        photo_id: int,
+        rate: RatingOptions = Query(description="Select a rate for photo"),
+        current_user: User = Depends(auth_service.get_current_user),
+        db: Session = Depends(get_db),
     ):
     """
     **Endpoint for rating a photo**
@@ -621,7 +623,7 @@ async def rate_photo(
     )
 
     if not new_rate_result:
-        raise HTTPException(status_code=409, detail="You've already rated this photo")
+        raise HTTPException(status_code=409, detail="You have already rated this photo")
 
     rate_response = RateResponse(rate=RateDb(id = new_rate_result.id, rate = rate, photo_id=photo_id, user_id=current_user.id))
     return rate_response
@@ -635,6 +637,7 @@ async def read_rate(
     ):
     """
     **Endpoint for reading rates**
+    Available for admin and moderator roles only.
 
     Args:
     - photo_id (int): ID of the photo
@@ -662,7 +665,8 @@ async def delete_rate(
         db: Session = Depends(get_db),
     ):
     """
-    **Endpoint for deleting the rate**
+    **Endpoint for deleting the rate**\n
+    Available for admin and moderator roles only.
 
     Args:
     - rate_id (int): ID of the rate to be deleted

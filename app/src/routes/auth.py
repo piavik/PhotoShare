@@ -135,7 +135,9 @@ async def confirmed_email(token: str, db: Session = Depends(get_db)):
 
 
 @router.post('/request_email')
-async def request_email(body: RequestEmail, background_tasks: BackgroundTasks, request: Request,
+async def request_email(body: RequestEmail,
+                        background_tasks: BackgroundTasks, 
+                        request: Request,
                         db: Session = Depends(get_db)):
     """
     **Request email for password reset**
@@ -160,7 +162,7 @@ async def request_email(body: RequestEmail, background_tasks: BackgroundTasks, r
 
 @router.post('/logout')
 async def logout(token: str = Depends(auth_service.oauth2_scheme),
-                 _: User = Depends(RoleChecker(allowed_roles=["user"]))):
+                 _: User = Depends(auth_service.get_current_user)):
     """
     **User logut endpoint**
 

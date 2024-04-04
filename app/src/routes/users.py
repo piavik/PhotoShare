@@ -151,10 +151,10 @@ async def forgot_password(body: UserNewPassword,
     try:
         user = await repository_users.get_user_by_email(body.email, db)
     except HTTPException:
-        return "Email to reset your password was send"
+        return "Email to reset your password was sent"
     background_tasks.add_task(send_password_email, user.email, body.new_password, user.username, request.base_url)
     red.delete(f"user:{user.email}")
-    return  {"message": "Email to reset your password was send"}
+    return  {"message": "Email to reset your password was sent"}
 
 
 @router.get("/{username}")
@@ -211,7 +211,7 @@ async def change_user_role(user_id: int,
                            db: Session = Depends(get_db)):
     """
     **Chenge user's role**\n
-    Minimal required role: moderator
+    Available for admin and moderator roles only.
 
     Args:
     - user_email (str): email of the user.
@@ -248,7 +248,7 @@ async def ban_unban_user(user_id: int,
                         ) -> dict:
     """
     **Endpoint for banning/unbanning users**\n
-    Admin role required
+    Available for admin role only.
 
     Args:
     - email (str): email of the user to ban
