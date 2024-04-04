@@ -57,7 +57,7 @@ async def send_password_email(email: EmailStr, password: str, username: str, hos
         host (str): Hostname of the recipient.
     """    
     try:
-        token_verification = auth_service.create_email_token({"sub": email, "pass": password}, expires_delta=60)
+        token_verification = await auth_service.create_email_token({"sub": email, "pass": password}, expires_delta=60)
         message = MessageSchema(
             subject="Reset password",
             recipients=[email],
