@@ -1,3 +1,4 @@
+import cloudinary
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
@@ -20,3 +21,11 @@ class Settings(BaseSettings):
 
 
 settings = Settings()
+
+
+cloudinary_config = cloudinary.config(
+        cloud_name=settings.cloudinary_name,
+        api_key=settings.cloudinary_api_key,
+        api_secret=settings.cloudinary_api_secret,
+        secure=True
+    )

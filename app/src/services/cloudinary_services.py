@@ -2,14 +2,7 @@ import cloudinary.uploader
 from typing import Optional
 
 from fastapi import HTTPException, status
-from app.src.conf.config import settings
-
-cloudinary.config(
-    cloud_name=settings.cloudinary_name,
-    api_key=settings.cloudinary_api_key,
-    api_secret=settings.cloudinary_api_secret,
-    secure=True,
-)
+from app.src.conf.config import settings, cloudinary_config
 
 
 async def upload_photo(file):
