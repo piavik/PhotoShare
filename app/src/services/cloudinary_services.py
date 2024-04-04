@@ -25,6 +25,7 @@ async def upload_photo(file):
             file, 
             allowed_formats=["jpg", "jpeg", "png", "webp", "bmp", "gif", "svg", "tif", "tiff"]
         )
+        return upload_result
     except cloudinary.exceptions.Error as e:
         print(f"Error uploading to Cloudinary: {e}")
         raise HTTPException(status_code=400, detail="Error uploading image.")

@@ -1,9 +1,24 @@
+from datetime import datetime, timedelta
+
 from operator import not_
 from libgravatar import Gravatar
 from sqlalchemy.orm import Session
+from sqlalchemy import and_
 
 from app.src.database.models import User, Photo, Comment
 from app.src.schemas import UserModel, RoleOptions
+
+
+async def get_user_by_id(user_id: int, db: Session) -> User | None:
+    """
+    Retrieves a user with the specified id.
+    Args:
+        user_id (int): id of the user to retrieve.
+        db (Session): database session
+    Returns:
+        User or None: The user with the specified email, or None if it does not exist.
+    """
+    return db.query(User).filter(User.id == user_id).first()
 
 
 async def get_user_by_email(email: str, db: Session) -> User | None:
@@ -152,9 +167,10 @@ async def change_user_username(user: User, username: str, db: Session) -> User:
     Returns:
         [User]: Updated user.
     """
-    user.username = username
+    current_user = await get_user_by_email(user.email, db)
+    current_user.username = username
     db.commit()
-    return user
+    return current_user
 
 
 async def change_user_email(user: User, email: str, db: Session) -> User:
@@ -169,35 +185,61 @@ async def change_user_email(user: User, email: str, db: Session) -> User:
     Returns:
         [User]: Updated user.
     """
-    user.email = email
-    user.confirmed = False
+    current_user = await get_user_by_email(user.email, db)
+    current_user.email = email
+    current_user.confirmed = False
     db.commit()
-    return user
+    return current_user
 
 
-def get_users_photos(user: User, db: Session) -> list:
+def get_users_photos(user_id: int, db: Session) -> list:
     """
     Get list of user's photos.
 
     Args:
-        user (User): The user to get photos.
+        user_id (int): User id to get comments.
         db (Session): The database session.
 
     Returns:
         [list]: User's photos list.
     """
-    return db.query(Photo).filter(Photo.owner_id == user.id).all()
+    return db.query(Photo).filter(Photo.owner_id == user_id).all()
 
 
-def get_users_comments(user: User, db: Session) -> list:
+def get_users_comments(user_id: int, db: Session) -> list:
     """
     Get list of user's comments.
 
     Args:
-        user (User): The user to get comments.
+        user_id (int): User id to get comments.
         db (Session): The database session.
 
     Returns:
         [list]: User's comments list.
     """
-    return db.query(Comment).filter(Comment.user_id == user.id).all()
+    return db.query(Comment).filter(Comment.user_id == user_id).all()
+
+
+async def get_active_users(db: Session, photo_created_from: datetime | None = None,
+                           photo_created_at: datetime | None = None) -> list:
+    """
+    Get list of active users.
+
+    Args:
+        photo_created_from (datetime, optional): Date of photo creation to search from.
+        photo_created_at (datetime, optional): Date of photo creation.
+        db (Session): The database session
+
+    Returns:
+        [list]: list of active users
+    """
+    if photo_created_from:
+        users = (db.query(User.id, User.username, User.email).join(Photo).group_by(User.id).
+                 where(Photo.created_at >= photo_created_from).all())
+    elif photo_created_at:
+        users = (db.query(User.id, User.username, User.email).join(Photo).group_by(User.id).
+                 where(and_(Photo.created_at >= photo_created_at,
+                            Photo.created_at <= photo_created_at+timedelta(days=1))).all())
+    else:
+        users = db.query(User.id, User.username, User.email).join(Photo).group_by(User.id).all()
+    return users
