@@ -29,7 +29,7 @@ $ poetry shell
 
 Make sure your editor is using the correct Python virtual environment.
 
-* Create `.env` file based on the template `.env.example`
+* Create your own `.env` file based on the template `.env.example`
 
 ___
 ## Running Application
@@ -49,6 +49,22 @@ alembic upgrade head
 ```bash
 py main.py
 ```
+
+___
+## Create docker container with the application
+
+* Create Docker container:
+
+```bash
+DOCKER_BUILDKIT=1 docker build --rm . -t photoshare:latest
+```
+
+* Run Docker container:
+
+```bash
+docker run -d --name photoshare --env-file ./.env -p 8000:8000 photoshare:latest
+```
+
 ___
 ## Acessing on local
 The application will get started in http://127.0.0.1:8000  
