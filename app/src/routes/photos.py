@@ -42,7 +42,7 @@ async def create_photo(
         db: Session = Depends(get_db),
     ):
     """
-    **Create photo endpoint**
+    **Create photo endpoint**\n
     Uploads photo into cloudinaty and create a new record in database.
 
     Args:
@@ -184,7 +184,7 @@ async def read_photo(
         response_type: ResponceOptions = Query(default=ResponceOptions.detailed, description="Select a response option")
     ):
     """
-    **Endpoint for getting photo by it's ID**
+    **Endpoint for getting photo by it's ID**\n
     Retrieves photo information by ID with various response formats based on user selection.
 
     Args:
@@ -217,7 +217,7 @@ async def update_photo_tags(
         db: Session = Depends(get_db),
     ):
     """
-    **Endpoint for editing tags of the photo**
+    **Endpoint for editing tags of the photo**\n
     Updates tags of the photo found by provided id, if valid new tags provided
 
     Args:
@@ -263,11 +263,11 @@ async def update_photo_tags(
 async def update_description(
         photo_id: int,
         description: str = Form(...),
-        current_user: User = Depends(RoleChecker(allowed_roles=["user"])),
+        current_user: User = Depends(auth_service.get_current_user),
         db: Session = Depends(get_db),
     ):
     """
-    **Endpoint for updating the description of the photo**
+    **Endpoint for updating the description of the photo**\n
     Updates description of the photo found by provided id, if valid new tags provided
 
     Args:
@@ -331,7 +331,7 @@ async def transform_photo(
         db: Session = Depends(get_db),
     ):
     """
-    **Photo transformation endpoint**
+    **Photo transformation endpoint**\n
     Transforms photo using cloudinary transformation services, returning qr with transformed photo url
    
 
@@ -399,15 +399,50 @@ async def transform_photo(
     return StreamingResponse(img_io, media_type="image/png")
 
 
+@router.get("/{photo_id}/comments", response_model=list[CommentDb])
+async def get_all_comments(
+        photo_id: int,
+        current_user: User = Depends(RoleChecker(allowed_roles=["moder"])),
+        db: Session = Depends(get_db)
+    ):
+    """
+    **Get all comments for the photo**\n
+    Available for admin and moderator roles only.
+
+
+    Args:
+    - photo_id (int): ID of the photo that is commented.
+    - current_user (User, optional): current user object.
+    - db (Session, optional): database session.
+
+    Raises:
+    - HTTPException: 404 Photo not found
+
+    Returns:
+    - [CommentResponse]: comment responce object
+    """
+    photo = await repository_photos.get_photo_by_id(photo_id=photo_id, db=db)
+
+    if not photo:
+        raise HTTPException(status_code=404, detail="Photo not found")
+
+    comments_list = await repository_comments.get_comments(photo_id, db)
+    
+    if not comments_list:
+        raise HTTPException(status_code=404, detail=f"No comments found for photo ID {photo_id}")
+
+    return comments_list
+
+
 @router.post("/{photo_id}/comment", response_model=CommentResponse, status_code=status.HTTP_201_CREATED)
-async def update_comment(
+async def update_my_comment(
         comment_text: str,
         photo_id: int,
         current_user: User = Depends(auth_service.get_current_user),
         db: Session = Depends(get_db)
     ):
     """
-    **Endpoint for creating or updating comment to the photo**
+    **Endpoint for creating and/or updating comment to the photo**
 
     Args:
     - comment_text (str): Text of the new comment
@@ -415,14 +450,38 @@ async def update_comment(
     - current_user (User, optional): current user object.
     - db (Session, optional): database session.
 
+    Raises:
+    - HTTPException: 400 You cannot comment your own photo
+    - HTTPException: 404 Photo not found
+
     Returns:
     - [CommentResponse]: comment responce object
     """
-    comment_to_update = CommentModel(
-        text     = comment_text,
-        photo_id = photo_id,
-        user_id  = current_user.id
-    )
+    photo = await repository_photos.get_photo_by_id(photo_id=photo_id, db=db)
+
+    if not photo:
+        raise HTTPException(status_code=404, detail="Photo not found")
+
+    # TBD: users cannot comment their own photos, admins can
+    # if photo.owner_id == current_user.id and current_user.role != "admin":
+    # Nobody can comment own photos
+    if photo.owner_id == current_user.id :
+        raise HTTPException(status_code=400, detail="You cannot comment your own photo")
+
+    comment = await repository_comments.get_comment_by_user(photo_id=photo_id, user_id=current_user.id, db=db)
+    print(comment is None)
+    # if comment does NOT exit -> create, if exists -> update 
+    if comment:
+        comment_to_update = CommentModel(
+            id       = comment.id,
+            text     = comment_text,
+            photo_id = photo_id,
+            user_id  = current_user.id)
+    else:
+        comment_to_update = CommentModel(
+            text     = comment_text,
+            photo_id = photo_id,
+            user_id  = current_user.id)
 
     new_comment = await repository_comments.update_comment(comment_to_update, db)
 
@@ -433,12 +492,64 @@ async def update_comment(
             photo_id = photo_id,
             user_id  = current_user.id
         ),
-        detail = "Comment updated"
+        message = f"Comment for photo id={photo_id} updated"
 
     )
     return comment_response
 
-@router.delete("/{photo_id}/comment", status_code=status.HTTP_200_OK)
+
+@router.patch("/{photo_id}/comment/{comment_id}", response_model=CommentResponse, status_code=status.HTTP_201_CREATED)
+async def update_comment(
+        photo_id: int,
+        comment_id: int,
+        new_comment_text: str,
+        current_user: User = Depends(RoleChecker(allowed_roles=["moder"])),
+        db: Session = Depends(get_db)
+    ):
+    """
+    **Endpoint for updating other user's comment to the photo**\n
+    Available for admins and moderator roles only.
+
+    Args:
+    - comment_text (str): Text of the new comment
+    - photo_id (int): ID of the photo that is commented.
+    - current_user (User, optional): current user object.
+    - db (Session, optional): database session.
+
+    Raises:
+    - HTTPException: 400 You cannot comment your own photo
+    - HTTPException: 404 Photo not found
+
+    Returns:
+    - [CommentResponse]: comment responce object
+    """
+    photo = await repository_photos.get_photo_by_id(photo_id=photo_id, db=db)
+
+    if not photo:
+        raise HTTPException(status_code=404, detail="Photo not found")
+
+    comment_to_update = CommentModel(
+        id       = comment_id,
+        text     = new_comment_text,
+        photo_id = photo_id,
+        user_id  = current_user.id)
+
+    new_comment = await repository_comments.update_comment(comment_to_update, db)
+
+    comment_response = CommentResponse(
+        comment = CommentDb(
+            id       = new_comment.id,
+            text     = new_comment_text,
+            photo_id = photo_id,
+            user_id  = current_user.id
+        ),
+        message = f"User_id={current_user.id}, {photo_id=}, {comment_id=} updated"
+
+    )
+    return comment_response
+
+
+@router.delete("/{photo_id}/comment/{comment_id}", status_code=status.HTTP_200_OK)
 async def delete_comment(
         photo_id: int,
         comment_id: int,
@@ -446,7 +557,8 @@ async def delete_comment(
         db: Session = Depends(get_db)
     ):
     """
-    **Endpoint for deleting the comment**
+    **Endpoint for deleting the comment**\n
+    Available for admin and moderator roles only.
 
     Args:
     - photo_id (int): ID of the photo
@@ -456,24 +568,30 @@ async def delete_comment(
 
     Raises:
     - HTTPException: 404 Comment does not exist
+    - HTTPException: 404 Photo not found
 
     Returns:
     - message: message
     """
+    photo = await repository_photos.get_photo_by_id(photo_id=photo_id, db=db)
+
+    if not photo:
+        raise HTTPException(status_code=404, detail="Photo not found")
+
     result = await repository_comments.delete_comment(comment_id, photo_id, db)
 
     if not result:
          raise HTTPException(status_code=404, detail="Comment does not exist")
 
-    return { "detail": "Comment deleted" }
+    return { "message": f"Comment id={comment_id} deleted" }
 
 
 @router.post("/{photo_id}/rate", response_model=RateResponse, status_code=status.HTTP_200_OK)
 async def rate_photo(
-    photo_id: int,
-    rate: RatingOptions = Query(description="Select a rate for photo"),
-    current_user: User = Depends(auth_service.get_current_user),
-    db: Session = Depends(get_db),
+        photo_id: int,
+        rate: RatingOptions = Query(description="Select a rate for photo"),
+        current_user: User = Depends(auth_service.get_current_user),
+        db: Session = Depends(get_db),
     ):
     """
     **Endpoint for rating a photo**
@@ -505,7 +623,7 @@ async def rate_photo(
     )
 
     if not new_rate_result:
-        raise HTTPException(status_code=409, detail="You've already rated this photo")
+        raise HTTPException(status_code=409, detail="You have already rated this photo")
 
     rate_response = RateResponse(rate=RateDb(id = new_rate_result.id, rate = rate, photo_id=photo_id, user_id=current_user.id))
     return rate_response
@@ -513,12 +631,13 @@ async def rate_photo(
 
 @router.get("/{photo_id}/rate",response_model=list[RateDb], status_code=status.HTTP_200_OK)
 async def read_rate(
-    photo_id: int,
-    current_user: User = Depends(RoleChecker(allowed_roles=["moder"])),
-    db: Session = Depends(get_db),
-):
+        photo_id: int,
+        current_user: User = Depends(RoleChecker(allowed_roles=["moder"])),
+        db: Session = Depends(get_db),
+    ):
     """
     **Endpoint for reading rates**
+    Available for admin and moderator roles only.
 
     Args:
     - photo_id (int): ID of the photo
@@ -541,12 +660,13 @@ async def read_rate(
 
 @router.delete("/{photo_id}/rate", status_code=status.HTTP_200_OK)
 async def delete_rate(
-    rate_id: int,
-    current_user: User = Depends(RoleChecker(allowed_roles=["moder"])),
-    db: Session = Depends(get_db),
-):
+        rate_id: int,
+        current_user: User = Depends(RoleChecker(allowed_roles=["moder"])),
+        db: Session = Depends(get_db),
+    ):
     """
-    **Endpoint for deleting the rate**
+    **Endpoint for deleting the rate**\n
+    Available for admin and moderator roles only.
 
     Args:
     - rate_id (int): ID of the rate to be deleted

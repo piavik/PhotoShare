@@ -204,7 +204,7 @@ async def forgot_password(body: UserNewPassword,
     Returns:
     - message: message
     """
-    message = {"message": "Email to reset your password was send"}
+    message = {"message": "Email to reset your password was sent"}
     try:
         user = await repository_users.get_user_by_email(body.email, db)
     except HTTPException:
@@ -216,7 +216,29 @@ async def forgot_password(body: UserNewPassword,
     return message
 
 
-@router.get('/reset_password/{token}')
+@router.get("/{username}")
+async def read_users(username: str, db: Session = Depends(get_db)) -> dict:
+    """
+    **Get user details**
+
+    Args:
+    - username (str): username of the user.
+    - db (Session, optional): database session.
+
+    Returns:
+    - user_info: dict with user details
+    """
+    user = await repository_users.get_user_by_username(username, db)
+    if user is None:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Invalid username")
+    user_info = {"username": user.username,
+                 "avatar_url": user.avatar,
+                 "email": user.email}
+    user_info["photos"] = len(repository_users.get_users_photos(user, db))
+    return user_info
+
+
+@router.patch('/reset_password/{token}')
 async def reset_password(token: str, db: Session = Depends(get_db)) -> dict:
     """
     **Reset password endpoint**\n
@@ -248,7 +270,7 @@ async def change_user_role(user_id: int,
                            db: Session = Depends(get_db)):
     """
     **Chenge user's role**\n
-    Minimal required role: moderator
+    Available for admin and moderator roles only.
 
     Args:
     - user_email (str): email of the user.
@@ -285,7 +307,7 @@ async def ban_unban_user(user_id: int,
                         ) -> dict:
     """
     **Endpoint for banning/unbanning users**\n
-    Admin role required
+    Available for admin role only.
 
     Args:
     - email (str): email of the user to ban

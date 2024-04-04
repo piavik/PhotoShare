@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "PhotoShare"
-version = "0.1.1"
+version = "0.1.2"
 description = "FastAPI pictures management app"
 authors = ["Alexey Lomakin <lomakin.dec1970@gmail.com>", "Oleksii Piavka <piavik@gmail.com>", "Olga Ivanko <o.ivanko@me.com", "Roman Siusiailo <siusiailoroman@gmail.com>"]
 license = "MIT"
