@@ -65,7 +65,7 @@ async def read_active_users(photo_created_from: datetime | None = None,
                      "comments": len(repository_users.get_users_comments(user[0], db))}
         users_lst.append(user_dict)
     result = []
-    if photos_more_than:
+    if photos_more_than is not None:
         for user in users_lst:
             if user["photos"] >= photos_more_than:
                 result.append(user)
@@ -89,8 +89,7 @@ async def read_users(username: str, db: Session = Depends(get_db)) -> dict:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Invalid username")
     user_info = {"username": user.username,
                  "avatar_url": user.avatar,
-                 "email": user.email,
-                 "role": user.role}
+                 "email": user.email}
     user_info["photos"] = len(repository_users.get_users_photos(user.id, db))
     return user_info
 
