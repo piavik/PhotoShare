@@ -110,7 +110,7 @@ class Auth:
 
     async def get_current_user(self, token: str = Depends(oauth2_scheme), db: Session = Depends(get_db)):
         """
-        Get authenticated user onject
+        Get authenticated user object
 
         Args:
             token (str): User's access token.
@@ -215,7 +215,7 @@ class Auth:
             raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
                                 detail="Invalid token for password reset")
 
-    def update_password(self, user: User, new_password: str, db: Session) -> str:
+    async def update_password(self, user: User, new_password: str, db: Session) -> str:
         """
         Update password to specified user.
 
@@ -227,8 +227,9 @@ class Auth:
         Returns:
             str: message
         """
+        current_user = await repository_users.get_user_by_email(user.email, db)
         hashed_password = self.get_password_hash(new_password)
-        user.password = hashed_password
+        current_user.password = hashed_password
         db.commit()
         return "Password was changed"
 

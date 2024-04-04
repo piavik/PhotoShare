@@ -23,7 +23,8 @@ from app.src.repository.users import (
     change_user_username,
     change_user_email,
     get_users_photos,
-    get_users_comments)
+    get_users_comments,
+    get_active_users)
 
 
 class TestUserRepository(unittest.IsolatedAsyncioTestCase):
@@ -91,11 +92,13 @@ class TestUserRepository(unittest.IsolatedAsyncioTestCase):
         self.assertIsNone(result)
 
     async def test_change_user_username(self):
+        self.session.query().filter().first.return_value = self.user
         self.session.commit.return_value = None
         result = await change_user_username(user=self.user, username="changed_username", db=self.session)
         self.assertEqual(result.username, "changed_username")
 
     async def test_change_user_email(self):
+        self.session.query().filter().first.return_value = self.user
         self.session.commit.return_value = None
         result = await change_user_email(user=self.user, email="changed_email@gmail.com", db=self.session)
         self.assertEqual(result.email, "changed_email@gmail.com")
@@ -103,14 +106,19 @@ class TestUserRepository(unittest.IsolatedAsyncioTestCase):
     def test_get_users_photos(self):
         check_list = ["photo1", "photo2", "photo3", "photo4"]
         self.session.query().filter().all.return_value = check_list
-        result = get_users_photos(user=self.user, db=self.session)
+        result = get_users_photos(user_id=self.user.id, db=self.session)
         self.assertEqual(result, check_list)
 
     def test_get_users_comments(self):
         check_list = ["comment1", "comment2", "comment3"]
         self.session.query().filter().all.return_value = check_list
-        result = get_users_comments(user=self.user, db=self.session)
+        result = get_users_comments(user_id=self.user.id, db=self.session)
         self.assertEqual(result, check_list)
+
+    async def test_get_active_users(self):
+        self.session.query().join().group_by().all.return_value = [self.user]
+        result = await get_active_users(db=self.session)
+        self.assertEqual(self.user, result[0])
 
 
 if __name__ == '__main__':

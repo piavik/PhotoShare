@@ -1,5 +1,8 @@
-from fastapi import APIRouter, Depends, UploadFile, File, HTTPException, status, BackgroundTasks, Request, Query
+from datetime import datetime
+
+from fastapi import (APIRouter, Depends, UploadFile, File, HTTPException, status, BackgroundTasks, Request, Query)
 from sqlalchemy.orm import Session
+from pydantic import EmailStr
 import cloudinary
 import cloudinary.uploader
 import redis
@@ -33,17 +36,70 @@ async def read_users_me(current_user: User = Depends(auth_service.get_current_us
                  "email": current_user.email,
                  "role": current_user.role,
                  "created_at": current_user.created_at}
-    user_info["photos"] = len(repository_users.get_users_photos(current_user, db))
-    user_info["comments"] = len(repository_users.get_users_comments(current_user, db))
+    user_info["photos"] = len(repository_users.get_users_photos(current_user.id, db))
+    user_info["comments"] = len(repository_users.get_users_comments(current_user.id, db))
+    return user_info
+
+
+@router.get("/")
+async def read_active_users(photo_created_from: datetime | None = None,
+                            photo_created_at: datetime | None = None,
+                            photos_more_than: int | None = None,
+                            db: Session = Depends(get_db)) -> list:
+    """
+    **Get all active users**
+
+    Args:
+    - photo_created_from (datetime, optional): Date of photo creation to search from.
+    - photo_created_at (datetime, optional): Date of photo creation.
+    - photos_more_than (int, optional): Number of photos that create user.
+
+    Returns:
+    - list: list of active users
+    """
+    users = await repository_users.get_active_users(db, photo_created_from, photo_created_at)
+    users_lst = []
+    for user in users:
+        user_dict = {"username": user[1], "email": user[2],
+                     "photos": len(repository_users.get_users_photos(user[0], db)),
+                     "comments": len(repository_users.get_users_comments(user[0], db))}
+        users_lst.append(user_dict)
+    result = []
+    if photos_more_than is not None:
+        for user in users_lst:
+            if user["photos"] >= photos_more_than:
+                result.append(user)
+    return result
+
+
+@router.get("/{username}")
+async def read_users(username: str, db: Session = Depends(get_db)) -> dict:
+    """
+    **Get user details**
+
+    Args:
+    - username (str): username of the user.
+    - db (Session, optional): database session.
+
+    Returns:
+    - user_info: dict with user details
+    """
+    user = await repository_users.get_user_by_username(username, db)
+    if user is None:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Invalid username")
+    user_info = {"username": user.username,
+                 "avatar_url": user.avatar,
+                 "email": user.email}
+    user_info["photos"] = len(repository_users.get_users_photos(user.id, db))
     return user_info
 
 
 @router.patch("/me", response_model=UserDb)
-async def update_user(background_tasks: BackgroundTasks, 
+async def update_user(background_tasks: BackgroundTasks,
                       request: Request,
                       token: str = Depends(auth_service.oauth2_scheme),
                       username: str | None = None,
-                      email: str | None = None,
+                      email: EmailStr | None = None,
                       current_user: User = Depends(auth_service.get_current_user),
                       db: Session = Depends(get_db)):
     """
@@ -77,10 +133,10 @@ async def update_user(background_tasks: BackgroundTasks,
             raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="Email already exists")
         user = await repository_users.change_user_email(current_user, email, db)
         background_tasks.add_task(send_email, user.email, user.username, request.base_url)
-        red.delete(f"user:{current_user.email}")
         red.set(token, 1)
         red.expire(token, 900)
-    return current_user
+    red.delete(f"user:{current_user.email}")
+    return user
 
 
 @router.patch('/me/avatar', response_model=UserDb)
@@ -97,7 +153,7 @@ async def update_avatar_user(file: UploadFile = File(),
 
     Returns:
     - [UserDb]: The user db object that has the avater changed
-    """         
+    """
     r = cloudinary.uploader.upload(file.file, public_id=f'PS_app/{current_user.username}', overwrite=True)
     src_url = cloudinary.CloudinaryImage(f'PS_app/{current_user.username}')\
                         .build_url(width=250, height=250, crop='fill', version=r.get('version'))
@@ -126,14 +182,14 @@ async def change_password(body: UserPassword,
     """                          
     if not auth_service.verify_password(body.old_password, current_user.password):
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid password")
-    message = auth_service.update_password(current_user, body.new_password, db)
+    message = await auth_service.update_password(current_user, body.new_password, db)
     red.delete(f"user:{current_user.email}")
     return  {"message": message}
 
 
 @router.post("/me/forgot_password")
-async def forgot_password(body: UserNewPassword, 
-                          background_tasks: BackgroundTasks, 
+async def forgot_password(body: UserNewPassword,
+                          background_tasks: BackgroundTasks,
                           request: Request,
                           db: Session = Depends(get_db)) -> dict:
     """
@@ -147,14 +203,17 @@ async def forgot_password(body: UserNewPassword,
 
     Returns:
     - message: message
-    """                          
+    """
+    message = {"message": "Email to reset your password was sent"}
     try:
         user = await repository_users.get_user_by_email(body.email, db)
     except HTTPException:
-        return "Email to reset your password was sent"
+        return message
+    if not user:
+        return message
     background_tasks.add_task(send_password_email, user.email, body.new_password, user.username, request.base_url)
     red.delete(f"user:{user.email}")
-    return  {"message": "Email to reset your password was sent"}
+    return message
 
 
 @router.get("/{username}")
@@ -200,7 +259,7 @@ async def reset_password(token: str, db: Session = Depends(get_db)) -> dict:
     user = await repository_users.get_user_by_email(email, db)
     if user is None:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Verification error")
-    auth_service.update_password(user, password, db)
+    await auth_service.update_password(user, password, db)
     return {"message": "Password reset"}
 
 
